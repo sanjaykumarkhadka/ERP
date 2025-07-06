@@ -1,0 +1,113 @@
+{% extends 'index.html' %}
+{% block nav %}
+    {%set current_page = 'inventory' %}
+{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Edit Inventory Record</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('inventory.edit_inventory', id=inventory.id) }}">
+        <div class="form-group">
+            <label for="week_commencing" class="form-label">Week Commencing</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing" 
+                   value="{{ inventory.week_commencing.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="form-group">
+            <label for="category_id" class="form-label">Category</label>
+            <select class="form-select" id="category_id" name="category_id" required>
+                <option value="">Select Category</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id == inventory.category_id %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="raw_material_id" class="form-label">Raw Material</label>
+            <select class="form-select" id="raw_material_id" name="raw_material_id" required>
+                <option value="">Select Raw Material</option>
+                {% for material in raw_materials %}
+                    <option value="{{ material.id }}" {% if material.id == inventory.raw_material_id %}selected{% endif %}>
+                        {{ material.description or material.item_code }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="price_per_kg" class="form-label">$/kg</label>
+            <input type="number" step="0.01" class="form-control" id="price_per_kg" name="price_per_kg" value="{{ inventory.price_per_kg }}" required>
+        </div>
+        <div class="form-group">
+            <label for="total_required" class="form-label">Total Required</label>
+            <input type="number" step="0.01" class="form-control" id="total_required" name="total_required" value="{{ inventory.total_required }}" required>
+        </div>
+        <div class="form-group">
+            <label for="soh" class="form-label">SOH</label>
+            <input type="number" step="0.01" class="form-control" id="soh" name="soh" value="{{ inventory.soh }}" required>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <h4>Week 1</h4>
+                <div class="form-group">
+                    <label for="monday" class="form-label">Monday</label>
+                    <input type="number" step="0.01" class="form-control" id="monday" name="monday" value="{{ inventory.monday }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="tuesday" class="form-label">Tuesday</label>
+                    <input type="number" step="0.01" class="form-control" id="tuesday" name="tuesday" value="{{ inventory.tuesday }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="wednesday" class="form-label">Wednesday</label>
+                    <input type="number" step="0.01" class="form-control" id="wednesday" name="wednesday" value="{{ inventory.wednesday }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="thursday" class="form-label">Thursday</label>
+                    <input type="number" step="0.01" class="form-control" id="thursday" name="thursday" value="{{ inventory.thursday }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="friday" class="form-label">Friday</label>
+                    <input type="number" step="0.01" class="form-control" id="friday" name="friday" value="{{ inventory.friday }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h4>Week 2</h4>
+                <div class="form-group">
+                    <label for="monday2" class="form-label">Monday</label>
+                    <input type="number" step="0.01" class="form-control" id="monday2" name="monday2" value="{{ inventory.monday2 }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="tuesday2" class="form-label">Tuesday</label>
+                    <input type="number" step="0.01" class="form-control" id="tuesday2" name="tuesday2" value="{{ inventory.tuesday2 }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="wednesday2" class="form-label">Wednesday</label>
+                    <input type="number" step="0.01" class="form-control" id="wednesday2" name="wednesday2" value="{{ inventory.wednesday2 }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="thursday2" class="form-label">Thursday</label>
+                    <input type="number" step="0.01" class="form-control" id="thursday2" name="thursday2" value="{{ inventory.thursday2 }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="friday2" class="form-label">Friday</label>
+                    <input type="number" step="0.01" class="form-control" id="friday2" name="friday2" value="{{ inventory.friday2 }}" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group mt-3">
+            <button type="submit" class="btn btn-primary">Update</button>
+            <a href="{{ url_for('inventory.inventory_page') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

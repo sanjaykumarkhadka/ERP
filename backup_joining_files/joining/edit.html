@@ -1,0 +1,275 @@
+{% extends "index.html" %}
+
+{% block title %}Edit Joining Record{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Edit Joining Record</h3>
+                    <a href="{{ url_for('joining.list_joining') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+                
+                <div class="card-body">
+                    <form method="POST">
+                        <!-- FG Code Section -->
+                        <div class="mb-4">
+                            <h5 class="text-primary border-bottom pb-2">Finished Good (FG)</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="fg_code" class="form-label">FG Code <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="fg_code" name="fg_code" required
+                                               value="{{ joining.fg_code }}" placeholder="Enter FG item code" autocomplete="off">
+                                        <div class="form-text">The finished good item code (must exist in Item Master)</div>
+                                        <div id="fg_validation" class="mt-1"></div>
+                                        <div id="fg_suggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Description</label>
+                                        <input type="text" class="form-control" id="fg_description" readonly
+                                               value="{{ joining.fg_description or '' }}" placeholder="Will be auto-filled when FG code is validated">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filling Code Section -->
+                        <div class="mb-4">
+                            <h5 class="text-info border-bottom pb-2">Filling Code (WIPF)</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="filling_code" class="form-label">Filling Code</label>
+                                        <input type="text" class="form-control" id="filling_code" name="filling_code"
+                                               value="{{ joining.filling_code or '' }}" placeholder="Enter WIPF item code (optional)" autocomplete="off">
+                                        <div class="form-text">Optional: The work-in-progress filling item code</div>
+                                        <div id="filling_validation" class="mt-1"></div>
+                                        <div id="filling_suggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Filling Code Description</label>
+                                        <input type="text" class="form-control" id="filling_code_description" readonly
+                                               value="{{ joining.filling_code_description or '' }}" placeholder="Will be auto-filled when filling code is validated">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Production Code Section -->
+                        <div class="mb-4">
+                            <h5 class="text-warning border-bottom pb-2">Production Code (WIP)</h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label for="production_code" class="form-label">Production Code</label>
+                                        <input type="text" class="form-control" id="production_code" name="production_code"
+                                               value="{{ joining.production_code or '' }}" placeholder="Enter WIP item code (optional)" autocomplete="off">
+                                        <div class="form-text">Optional: The work-in-progress item code</div>
+                                        <div id="production_validation" class="mt-1"></div>
+                                        <div id="production_suggestions" class="list-group position-absolute w-100" style="z-index: 1000; display: none;"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label class="form-label">Production Description</label>
+                                        <input type="text" class="form-control" id="production_description" readonly
+                                               value="{{ joining.production_description or '' }}" placeholder="Will be auto-filled when production code is validated">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Section -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" 
+                                       {% if joining.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Active Record
+                                </label>
+                                <div class="form-text">Uncheck to deactivate this joining record</div>
+                            </div>
+                        </div>
+
+                        <!-- Flow Type Preview -->
+                        <div class="mb-4">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-info-circle"></i> Manufacturing Flow Preview</h6>
+                                <div id="flow_preview">
+                                    <strong>Current Flow:</strong> <span id="flow_type">{{ joining.get_manufacturing_flow_type() }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group text-end">
+                            <button type="button" class="btn btn-secondary me-2" onclick="window.history.back()">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="submit_btn">
+                                <i class="fas fa-save"></i> Update Joining Record
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let fgValid = true; // Start as valid since we have existing data
+let fillingValid = true; // Optional field
+let productionValid = true; // Optional field
+
+function validateSubmit() {
+    const submitBtn = document.getElementById('submit_btn');
+    submitBtn.disabled = !fgValid;
+}
+
+function updateFlowPreview() {
+    const fillingCode = document.getElementById('filling_code').value.trim();
+    const productionCode = document.getElementById('production_code').value.trim();
+    const flowTypeElement = document.getElementById('flow_type');
+    
+    let flowType;
+    if (fillingCode && productionCode) {
+        flowType = "Complex flow (RM → WIP → WIPF → FG)";
+    } else if (fillingCode) {
+        flowType = "Filling flow (RM → WIPF → FG)";
+    } else if (productionCode) {
+        flowType = "Production flow (RM → WIP → FG)";
+    } else {
+        flowType = "Direct production (RM → FG)";
+    }
+    
+    flowTypeElement.textContent = flowType;
+}
+
+function validateItem(itemCode, targetType, validationElementId, descriptionElementId) {
+    const validationDiv = document.getElementById(validationElementId);
+    const descriptionInput = document.getElementById(descriptionElementId);
+    
+    if (!itemCode.trim()) {
+        validationDiv.innerHTML = '';
+        descriptionInput.value = '';
+        if (targetType === 'FG') {
+            fgValid = false;
+        }
+        validateSubmit();
+        updateFlowPreview();
+        return;
+    }
+    
+    fetch(`/api/joining/validate-item?item_code=${encodeURIComponent(itemCode)}&item_type=${targetType}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                validationDiv.innerHTML = `<div class="text-success"><i class="fas fa-check-circle"></i> Valid ${data.item_type} item found</div>`;
+                descriptionInput.value = data.description;
+                if (targetType === 'FG') {
+                    fgValid = true;
+                }
+            } else {
+                validationDiv.innerHTML = `<div class="text-danger"><i class="fas fa-times-circle"></i> ${data.message}</div>`;
+                descriptionInput.value = '';
+                if (targetType === 'FG') {
+                    fgValid = false;
+                }
+            }
+            validateSubmit();
+            updateFlowPreview();
+        })
+        .catch(error => {
+            console.error('Validation error:', error);
+            validationDiv.innerHTML = '<div class="text-danger"><i class="fas fa-exclamation-triangle"></i> Validation error</div>';
+            descriptionInput.value = '';
+            if (targetType === 'FG') {
+                fgValid = false;
+            }
+            validateSubmit();
+        });
+}
+
+function showSuggestions(inputElement, targetType, suggestionsElementId) {
+    const query = inputElement.value.trim();
+    const suggestionsDiv = document.getElementById(suggestionsElementId);
+    
+    if (query.length < 2) {
+        suggestionsDiv.style.display = 'none';
+        return;
+    }
+    
+    fetch(`/api/joining/items/${targetType}?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(items => {
+            if (items.length > 0) {
+                const suggestionsHTML = items.map(item => 
+                    `<a href="#" class="list-group-item list-group-item-action" onclick="selectItem('${item.item_code}', '${item.description}', '${inputElement.id}')">
+                        <strong>${item.item_code}</strong> - ${item.description}
+                    </a>`
+                ).join('');
+                suggestionsDiv.innerHTML = suggestionsHTML;
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Suggestions error:', error);
+            suggestionsDiv.style.display = 'none';
+        });
+}
+
+function selectItem(itemCode, description, inputId) {
+    document.getElementById(inputId).value = itemCode;
+    
+    // Hide suggestions
+    const suggestionsId = inputId + '_suggestions';
+    document.getElementById(suggestionsId).style.display = 'none';
+    
+    // Trigger validation
+    const targetType = inputId === 'fg_code' ? 'FG' : inputId === 'filling_code' ? 'WIPF' : 'WIP';
+    const validationId = inputId.replace('_code', '_validation');
+    const descriptionId = inputId === 'fg_code' ? 'fg_description' : inputId.replace('_code', '_code_description');
+    
+    validateItem(itemCode, targetType, validationId, descriptionId);
+}
+
+// Event listeners
+document.getElementById('fg_code').addEventListener('input', function() {
+    validateItem(this.value, 'FG', 'fg_validation', 'fg_description');
+    showSuggestions(this, 'FG', 'fg_suggestions');
+});
+
+document.getElementById('filling_code').addEventListener('input', function() {
+    validateItem(this.value, 'WIPF', 'filling_validation', 'filling_code_description');
+    showSuggestions(this, 'WIPF', 'filling_suggestions');
+});
+
+document.getElementById('production_code').addEventListener('input', function() {
+    validateItem(this.value, 'WIP', 'production_validation', 'production_description');
+    showSuggestions(this, 'WIP', 'production_suggestions');
+});
+
+// Hide suggestions when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.form-group')) {
+        document.querySelectorAll('[id$="_suggestions"]').forEach(div => {
+            div.style.display = 'none';
+        });
+    }
+});
+
+// Update flow preview when page loads and when codes change
+document.addEventListener('DOMContentLoaded', function() {
+    updateFlowPreview();
+});
+</script>
+{% endblock %} 

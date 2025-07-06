@@ -1,0 +1,47 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit Production Entry</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'warning' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form method="post" action="{{ url_for('production.production_edit', id=production.id) }}">
+        <div class="form-group">
+            <label for="week_commencing">Week Commencing</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing" value="{{ production.week_commencing.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="form-group">
+            <label for="production_date" class="form-label">Production Date</label>
+            <input type="date" class="form-control" id="production_date" name="production_date" value="{{ production.production_date.strftime('%Y-%m-%d') }}" required>
+        </div>
+        <div class="form-group">
+            <label for="production_code" class="form-label">Production Code</label>
+            <input type="text" class="form-control" id="production_code" name="production_code" value="{{ production.production_code }}" required>
+        </div>
+        <div class="form-group">
+            <label for="product_description" class="form-label">Description</label>
+            <input type="text" class="form-control" id="product_description" name="product_description" value="{{ production.description or '' }}">
+        </div>
+        <div class="form-group">
+            <label for="batches" class="form-label">Batches</label>
+            <input type="number" step="0.01" class="form-control" id="batches" name="batches" value="{{ production.batches }}" required>
+        </div>
+        <div class="form-group">
+            <label for="total_kg" class="form-label">Total KG</label>
+            <input type="number" step="0.01" class="form-control" id="total_kg" name="total_kg" value="{{ production.total_kg }}" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Update</button>
+        <a href="{{ url_for('production.production_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

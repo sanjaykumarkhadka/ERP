@@ -1,0 +1,77 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Production Raw Material Report</h1>
+
+    <!-- Week Commencing Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-6">
+                    <label for="week_commencing" class="form-label">Week Commencing:</label>
+                    <input type="date" class="form-control" id="week_commencing" name="week_commencing" 
+                           value="{{ request.args.get('week_commencing', '') }}"
+                           onchange="adjustToMonday(this)">
+                    <small class="text-muted" id="week_commencing_feedback"></small>
+                </div>
+                <div class="col-md-6">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <a href="{{ url_for('production.production_raw_material_report') }}" class="btn btn-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mb-3">
+        <a href="{{ url_for('production.production_list') }}" class="btn btn-primary">Back to Production List</a>
+    </div>
+
+    {% if raw_material_data %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Week Commencing</th>
+                    <th>Raw Material</th>
+                    <th>Usage (kg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in raw_material_data %}
+                <tr>
+                    <td>{{ entry.week_commencing }}</td>
+                    <td>{{ entry.raw_material }}</td>
+                    <td>{{ "%.2f"|format(entry.usage) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-warning">
+            <p>No raw material data available for the selected week.</p>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+function adjustToMonday(input) {
+    const selectedDate = new Date(input.value);
+    if (selectedDate) {
+        const dayOfWeek = selectedDate.getDay();
+        const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+        const monday = new Date(selectedDate);
+        monday.setDate(selectedDate.getDate() + diffToMonday);
+        
+        const feedback = document.getElementById('week_commencing_feedback');
+        if (diffToMonday !== 0) {
+            input.value = monday.toISOString().split('T')[0];
+            feedback.textContent = `Adjusted to Monday: ${monday.toLocaleDateString()}`;
+            feedback.className = 'text-muted';
+        } else {
+            feedback.textContent = `Selected date is a Monday: ${monday.toLocaleDateString()}`;
+            feedback.className = 'text-success';
+        }
+    }
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>German Butchery Inventory Management System</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/browser.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/browser.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='images/browser.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/browser.png') }}">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">              
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery UI CSS and JS -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/ui-lightness/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+    .sort-icon::after { content: '\f0dc'; font-family: 'Font Awesome 6 Free'; font-weight: 900; }
+    .sort-asc .sort-icon::after { content: '\f062'; }
+    .sort-desc .sort-icon::after { content: '\f063'; }
+    
+    /* User dropdown styles */
+    .dropdown-menu {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .dropdown-item {
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(5px);
+    }
+    
+    .dropdown-item.text-danger:hover {
+        background-color: #f8d7da;
+        color: #721c24 !important;
+    }
+    
+    .dropdown-header {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    #userDropdown:hover {
+        background-color: rgba(255,255,255,0.1);
+        border-color: #fff;
+    }
+    
+    /* Force dropdown to be visible */
+    .dropdown-menu.show {
+        display: block !important;
+    }
+    
+    /* Navigation dropdown styles */
+    nav .dropdown {
+        position: relative;
+        display: inline-block;
+    }
+    
+    nav .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background-color: #444;
+        border: none;
+        border-radius: 4px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        min-width: 180px;
+        z-index: 1000;
+        display: none;
+    }
+    
+    nav .dropdown-menu.show {
+        display: block !important;
+    }
+    
+    nav .dropdown-item {
+        display: block;
+        padding: 8px 16px;
+        color: #fff;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+    }
+    
+    nav .dropdown-item:hover {
+        background-color: #555;
+        color: #fff;
+        transform: none;
+    }
+    
+    nav .dropdown-toggle {
+        color: #fff;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    
+    nav .dropdown-toggle:hover {
+        color: #fff;
+        text-decoration: none;
+    }
+    
+    nav .dropdown-toggle::after {
+        content: ' ▼';
+        font-size: 0.8em;
+        margin-left: 5px;
+    }
+    </style>
+
+</head>
+<body>
+    <header>
+        <div style="position: relative; padding: 20px; text-align: center;">
+            <!-- Logo - positioned to the left -->  
+            <div class="logo" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%);">
+                <img src="{{ url_for('static', filename='images/CORRECT GB LOGO.jpg') }}" alt="German Butchery Logo" style="height: 60px; width: auto;">
+            </div>
+            
+            <!-- User info positioned absolutely to the right -->
+            <div class="user-info" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); color: white;">
+                {% if session.username %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border: 2px solid white; padding: 8px 16px; font-weight: 500;">
+                            <i class="fas fa-user-circle"></i> {{ session.username }}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('login.profile') }}">
+                                    <i class="fas fa-user-edit"></i> Edit Profile
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('login.change_password') }}">
+                                    <i class="fas fa-key"></i> Change Password
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('login.logout') }}">
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                {% else %}
+                    <div>
+                        <a href="{{ url_for('login.login') }}" class="btn btn-outline-light">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Centered H1 title -->
+            <h1 style="margin: 0; color: white; font-size: 2.5rem; font-weight: 300;">
+                GB Production and Inventory Management System
+            </h1>
+        </div>
+        <nav>
+            <ul>
+                    <li class="{% if current_page == 'home' %}active{% endif %}">
+                    <a href="{{ url_for('index') }}">Home</a>
+                </li>
+                    <li class="{% if current_page == 'item_master' %}active{% endif %}">
+                    <a href="{{ url_for('item_master.item_master_list') }}">Item Master</a>
+                </li>
+                    <li class="{% if current_page == 'recipe' %}active{% endif %}">
+                    <a href="{{ url_for('recipe.recipe_page') }}">Recipe</a>
+                </li>
+                <li
+                    class="{% if current_page == 'soh' or current_page == 'ingredients' %}active{% endif %}">
+                    <div class="dropdown">
+                        <a href="#" class="dropdown-toggle" id="sohDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            SOH & Ingredients
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="sohDropdown">
+                            <li><a class="dropdown-item" href="{{ url_for('soh.soh_list') }}">SOH (Finished Goods)</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('ingredients.ingredients_list') }}">Ingredients</a></li>
+                        </ul>
+                    </div>
+                </li>
+                <li class="{% if current_page == 'packing' %}active{% endif %}">
+                <a href="{{ url_for('packing.packing_list') }}">Packing</a>
+            </li>
+                <li
+                    class="{% if current_page == 'filling' %}active{% endif %}">
+                   <a href="{{ url_for('filling.filling_list') }}">Filling</a>
+            </li>
+                <li
+                    class="{% if current_page == 'production' %}active{% endif %}">
+                    <a href="{{ url_for('production.production_list') }}">Production</a>
+                </li>               
+                <li
+                class="{% if current_page == 'usage' %}active{% endif %}">
+                <a href="{{ url_for('recipe.usage') }}">Usage Report</a>
+            </li>
+                <li
+                    class="{% if current_page == 'raw_material_report' %}active{% endif %}">
+                    <a href="{{ url_for('recipe.raw_material_report') }}">Raw Material Report</a>
+                </li>
+                <li
+                    class="{% if current_page == 'inventory' %}active{% endif %}">
+                    <a href="{{ url_for('inventory.inventory_page') }}">Inventory</a>
+                </li>
+            </ul>
+        </nav>
+
+    </header>
+
+    <main>
+        {% block content %}
+        <h2>Welcome to the German Butchery Production and Inventory Management System</h2>
+        <p>Select a section from the navigation menu to get started.</p>
+        {% endblock %}
+    </main>
+
+    <script>
+    // Ensure Bootstrap dropdown functionality works
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap dropdowns
+        var dropdownElementList = [].slice.call(document.querySelectorAll('.dropdown-toggle'));
+        var dropdownList = dropdownElementList.map(function (dropdownToggleEl) {
+            return new bootstrap.Dropdown(dropdownToggleEl);
+        });
+        
+        // Handle navigation dropdown (SOH & Ingredients)
+        const sohDropdown = document.getElementById('sohDropdown');
+        if (sohDropdown) {
+            sohDropdown.addEventListener('click', function(e) {
+                e.preventDefault();
+                const dropdownMenu = this.nextElementSibling;
+                
+                // Close other dropdowns first
+                document.querySelectorAll('nav .dropdown-menu.show').forEach(menu => {
+                    if (menu !== dropdownMenu) {
+                        menu.classList.remove('show');
+                    }
+                });
+                
+                // Toggle the dropdown
+                dropdownMenu.classList.toggle('show');
+            });
+        }
+        
+        // Add click event for user dropdown as fallback
+        const userDropdown = document.getElementById('userDropdown');
+        if (userDropdown) {
+            userDropdown.addEventListener('click', function(e) {
+                e.preventDefault();
+                const dropdownMenu = this.nextElementSibling;
+                
+                // Close navigation dropdowns first
+                document.querySelectorAll('nav .dropdown-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+                
+                // Toggle the dropdown
+                if (dropdownMenu.classList.contains('show')) {
+                    dropdownMenu.classList.remove('show');
+                } else {
+                    // Close other user dropdowns first
+                    document.querySelectorAll('.user-info .dropdown-menu.show').forEach(menu => {
+                        menu.classList.remove('show');
+                    });
+                    dropdownMenu.classList.add('show');
+                }
+            });
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.dropdown')) {
+                document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+        
+        // Logout confirmation
+        const logoutLink = document.querySelector('a[href*="logout"]');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', function(e) {
+                if (!confirm('Are you sure you want to logout?')) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+    </script>
+
+
+</body>
+</html>

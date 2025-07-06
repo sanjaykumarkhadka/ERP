@@ -1,0 +1,556 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Add Ingredient to Stock Management</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="POST" action="{{ url_for('ingredients.ingredients_create') }}" id="ingredientForm">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="week_commencing">Week Commencing</label>
+                    <input type="date" class="form-control" id="week_commencing" name="week_commencing" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="stocktake_type">Stocktake Type</label>
+                    <select class="form-control" id="stocktake_type" name="stocktake_type" required>
+                        <option value="">Select Stocktake Type</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="annual">Annual</option>
+                        <option value="obsolete">Obsolete</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="user">User</label>
+            <input type="text" class="form-control" id="user" name="user" required placeholder="Enter username">
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="item_code_input">Item Code <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="item_code_input" name="item_code" required 
+                           placeholder="Type to search item code..." autocomplete="off" onchange="validateItemCode()">
+                    <div id="item_code_suggestions" class="suggestion-list"></div>
+                    <input type="hidden" id="selected_item_code" name="selected_item_code">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="current_stock">SOH (Stock on Hand) <span class="text-danger">*</span></label>
+                    <input type="number" step="0.01" class="form-control" id="current_stock" name="current_stock" value="0" required onchange="calculateOrderAndStockValue()">
+                </div>
+            </div>
+        </div>
+
+        <!-- Auto-populated fields from Item Master (read-only) -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Item Information (Auto-populated from Item Master)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <input type="text" class="form-control" id="description" name="description" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="category_name">Category</label>
+                            <input type="text" class="form-control" id="category_name" name="category_name" readonly>
+                            <input type="hidden" id="category_id" name="category_id">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label for="department_name">Department</label>
+                            <input type="text" class="form-control" id="department_name" name="department_name" readonly>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="uom_name">UOM</label>
+                            <input type="text" class="form-control" id="uom_name" name="uom_name" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="min_level">Min Level</label>
+                            <input type="number" step="0.01" class="form-control" id="min_level" name="min_level" value="0" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="max_level">Max Level</label>
+                            <input type="number" step="0.01" class="form-control" id="max_level" name="max_level" value="0" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="price_uom">$/UOM</label>
+                            <input type="number" step="0.01" class="form-control" id="price_uom" name="price_uom" value="0" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="price_kg">$/KG</label>
+                            <input type="number" step="0.01" class="form-control" id="price_kg" name="price_kg" value="0" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label for="order_quantity">Order Qty</label>
+                            <input type="number" step="0.01" class="form-control" id="order_quantity" name="order_quantity" value="0" readonly style="background-color: #fff3cd; font-weight: bold;">
+                            <small class="form-text text-muted">Auto-calculated</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="stock_value">Stock Value</label>
+                            <input type="number" step="0.01" class="form-control form-control-lg" id="stock_value" name="stock_value" value="0" readonly style="font-size: 1.2rem; font-weight: bold; background-color: #e8f5e8;">
+                            <small class="form-text text-muted">Auto-calculated based on UOM and pricing</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="notes">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" id="submitButton">Add to Stock Management</button>
+        <a href="{{ url_for('ingredients.ingredients_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+
+
+<style>
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+    
+    .readonly-field {
+        background-color: #f8f9fa;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .form-control:read-only {
+        background-color: #f8f9fa;
+        opacity: 1;
+    }
+    
+    .stock-value-highlight {
+        background-color: #e8f5e8 !important;
+        border: 2px solid #28a745 !important;
+        font-weight: bold;
+        color: #155724;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        font-weight: 500;
+    }
+    
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .suggestion-list {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        display: none;
+    }
+    
+    .suggestion-list ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .suggestion-list li {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .suggestion-list li:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .suggestion-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .form-group {
+        position: relative;
+    }
+    
+    .card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 1px solid #dee2e6;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .card-header h6 {
+        color: #495057;
+        font-weight: 600;
+    }
+    
+    .card-header i {
+        color: #007bff;
+        margin-right: 8px;
+    }
+    
+    .text-danger {
+        color: #dc3545 !important;
+    }
+    
+    .form-control:read-only {
+        background-color: #f8f9fa;
+        border-color: #e9ecef;
+        opacity: 1;
+    }
+    
+    #order_quantity {
+        background-color: #fff3cd !important;
+        border-color: #ffeaa7 !important;
+        font-weight: bold;
+    }
+    
+    #stock_value {
+        background-color: #d4edda !important;
+        border-color: #c3e6cb !important;
+    }
+</style>
+
+<script>
+// Set default week commencing to current Monday
+function setDefaultWeekCommencing() {
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const daysToMonday = dayOfWeek === 0 ? -6 : -dayOfWeek + 1; // Adjust to Monday
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + daysToMonday);
+    
+    const year = monday.getFullYear();
+    const month = String(monday.getMonth() + 1).padStart(2, '0');
+    const day = String(monday.getDate()).padStart(2, '0');
+    document.getElementById('week_commencing').value = `${year}-${month}-${day}`;
+}
+
+// Calculate order quantity and stock value
+function calculateOrderAndStockValue() {
+    const currentStock = parseFloat(document.getElementById('current_stock').value) || 0;
+    const minLevel = parseFloat(document.getElementById('min_level').value) || 0;
+    const maxLevel = parseFloat(document.getElementById('max_level').value) || 0;
+    const priceUom = parseFloat(document.getElementById('price_uom').value) || 0;
+    const priceKg = parseFloat(document.getElementById('price_kg').value) || 0;
+    const uomName = document.getElementById('uom_name').value || '';
+    
+    // Calculate order quantity using formula: if(SOH < MIN, MAX - SOH, 0)
+    let orderQuantity = 0;
+    if (currentStock < minLevel) {
+        orderQuantity = maxLevel - currentStock;
+    }
+    document.getElementById('order_quantity').value = orderQuantity.toFixed(2);
+    
+    // Calculate stock value using the complex formula
+    let stockValue = 0;
+    if (uomName.toLowerCase() === 'kg' || uomName.toLowerCase() === 'liter') {
+        stockValue = currentStock * priceKg;
+    } else {
+        stockValue = currentStock * priceUom;
+    }
+    document.getElementById('stock_value').value = stockValue.toFixed(2);
+}
+
+// Autocomplete functionality for Item Code
+let selectedItemData = null;
+
+function setupAutocomplete() {
+    const itemCodeInput = document.getElementById('item_code_input');
+    const suggestionsDiv = document.getElementById('item_code_suggestions');
+    
+    itemCodeInput.addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length > 0) {
+            fetchItemSuggestions(query);
+        } else {
+            hideSuggestions();
+            clearFormFields();
+        }
+    });
+    
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('#item_code_input') && !event.target.closest('#item_code_suggestions')) {
+            hideSuggestions();
+        }
+    });
+}
+
+function fetchItemSuggestions(query) {
+    fetch(`{{ url_for('ingredients.autocomplete_ingredients') }}?query=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displaySuggestions(data);
+        })
+        .catch(error => {
+            console.error('Error fetching suggestions:', error);
+            hideSuggestions();
+        });
+}
+
+function displaySuggestions(items) {
+    const suggestionsDiv = document.getElementById('item_code_suggestions');
+    
+    if (items.length === 0) {
+        hideSuggestions();
+        return;
+    }
+    
+    const ul = document.createElement('ul');
+    items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = `${item.item_code} - ${item.description}`;
+        li.dataset.itemCode = item.item_code;
+        li.dataset.description = item.description;
+        
+        li.addEventListener('click', function() {
+            selectItem(item.item_code, item.description);
+        });
+        
+        ul.appendChild(li);
+    });
+    
+    suggestionsDiv.innerHTML = '';
+    suggestionsDiv.appendChild(ul);
+    suggestionsDiv.style.display = 'block';
+}
+
+function hideSuggestions() {
+    const suggestionsDiv = document.getElementById('item_code_suggestions');
+    suggestionsDiv.style.display = 'none';
+    suggestionsDiv.innerHTML = '';
+}
+
+function selectItem(itemCode, description) {
+    document.getElementById('item_code_input').value = `${itemCode} - ${description}`;
+    document.getElementById('selected_item_code').value = itemCode;
+    hideSuggestions();
+    
+    // Fetch full item data and populate form
+    fetchItemData(itemCode);
+}
+
+function fetchItemData(itemCode) {
+    // Make an AJAX call to get item details
+    fetch(`{{ url_for('ingredients.get_item_details', item_code='PLACEHOLDER') }}`.replace('PLACEHOLDER', encodeURIComponent(itemCode)))
+        .then(response => response.json())
+        .then(itemData => {
+            if (itemData && !itemData.error) {
+                selectedItemData = itemData;
+                updateFormFromItemData(itemData);
+            } else {
+                console.error('Error:', itemData.error || 'Item not found');
+                alert('Item not found or error fetching item details');
+                clearFormFields();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching item data:', error);
+            alert('Error fetching item details. Please try again.');
+            clearFormFields();
+        });
+}
+
+function updateFormFromItemData(itemData) {
+    // Auto-populate fields from selected item
+    document.getElementById('description').value = itemData.description || '';
+    document.getElementById('min_level').value = itemData.min_level || '0';
+    document.getElementById('max_level').value = itemData.max_level || '0';
+    document.getElementById('price_kg').value = itemData.price_per_kg || '0';
+    
+    // Set category information
+    document.getElementById('category_id').value = itemData.category_id || '';
+    document.getElementById('category_name').value = itemData.category_name || '';
+    
+    // Set department information
+    document.getElementById('department_name').value = itemData.department_name || '';
+    
+    // Set UOM information
+    document.getElementById('uom_name').value = itemData.uom_name || '';
+    
+    // Set pricing information (these might need to be fetched from separate API calls)
+    document.getElementById('price_uom').value = itemData.price_per_uom || itemData.price_per_kg || '0';
+    
+    // Focus on current stock field for user input
+    document.getElementById('current_stock').focus();
+    
+    // Calculate order quantity and stock value when item is selected
+    calculateOrderAndStockValue();
+}
+
+function clearFormFields() {
+    selectedItemData = null;
+    document.getElementById('selected_item_code').value = '';
+    document.getElementById('description').value = '';
+    document.getElementById('category_id').value = '';
+    document.getElementById('category_name').value = '';
+    document.getElementById('department_name').value = '';
+    document.getElementById('uom_name').value = '';
+    document.getElementById('min_level').value = '0';
+    document.getElementById('max_level').value = '0';
+    document.getElementById('price_kg').value = '0';
+    document.getElementById('price_uom').value = '0';
+    document.getElementById('current_stock').value = '0';
+    document.getElementById('order_quantity').value = '0';
+    document.getElementById('stock_value').value = '0';
+    document.getElementById('notes').value = '';
+}
+
+function validateItemCode() {
+    const itemCodeInput = document.getElementById('item_code_input').value.trim();
+    const selectedItemCode = document.getElementById('selected_item_code').value;
+    
+    if (itemCodeInput && !selectedItemCode) {
+        // User typed something but didn't select from suggestions
+        alert('Please select a valid item code from the suggestions.');
+        document.getElementById('item_code_input').focus();
+        return false;
+    }
+    return true;
+}
+
+// Form validation
+document.getElementById('ingredientForm').addEventListener('submit', function(e) {
+    var itemCodeInput = document.getElementById('item_code_input').value.trim();
+    var selectedItemCode = document.getElementById('selected_item_code').value.trim();
+    var weekCommencing = document.getElementById('week_commencing').value.trim();
+    var stocktakeType = document.getElementById('stocktake_type').value.trim();
+    var user = document.getElementById('user').value.trim();
+    var currentStock = parseFloat(document.getElementById('current_stock').value);
+    
+    if (!itemCodeInput || !selectedItemCode) {
+        e.preventDefault();
+        alert('Please select a valid item code from the suggestions.');
+        document.getElementById('item_code_input').focus();
+        return;
+    }
+    
+    if (!weekCommencing) {
+        e.preventDefault();
+        alert('Please select week commencing date.');
+        document.getElementById('week_commencing').focus();
+        return;
+    }
+    
+    if (!stocktakeType) {
+        e.preventDefault();
+        alert('Please select stocktake type.');
+        document.getElementById('stocktake_type').focus();
+        return;
+    }
+    
+    if (!user) {
+        e.preventDefault();
+        alert('Please enter user name.');
+        document.getElementById('user').focus();
+        return;
+    }
+    
+    if (currentStock < 0) {
+        e.preventDefault();
+        alert('Stock on Hand must be a non-negative number.');
+        document.getElementById('current_stock').focus();
+        return;
+    }
+    
+    // Ensure item details are loaded
+    if (!selectedItemData) {
+        e.preventDefault();
+        alert('Please wait for item details to load or select a different item.');
+        return;
+    }
+    
+    // Update the form field name to match what the backend expects
+    document.getElementById('item_code_input').name = 'item_code';
+    document.getElementById('item_code_input').value = selectedItemCode;
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default week commencing
+    setDefaultWeekCommencing();
+    
+    // Setup autocomplete functionality
+    setupAutocomplete();
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            if (alert.classList.contains('alert-dismissible')) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        });
+    }, 5000);
+});
+</script>
+{% endblock %} 

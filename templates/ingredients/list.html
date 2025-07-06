@@ -1,0 +1,832 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-2">
+    <section id="search">
+        <h2> Stocktake Search</h2>
+        <div class="search-container">
+            <form id="searchForm" onsubmit="return false;">
+                <div class="search-row">
+                    <div class="form-group">
+                        <label for="search_item_code"> Item Code</label>
+                        <input type="text" id="search_item_code" name="item_code" value="{{ search_item_code | default('') }}" 
+                               autocomplete="off" placeholder="Enter item code...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="search_description"> Description</label>
+                        <input type="text" id="search_description" name="description" value="{{ search_description | default('') }}" 
+                               placeholder="Enter description...">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="search_category"> Category</label>
+                        <select id="search_category" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.name }}" 
+                                        {% if search_category == category.name %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="search-row">
+                    <div class="form-group">
+                        <label for="search_week_commencing"> Week Commencing</label>         
+                        <input type="date" id="search_week_commencing" name="week_commencing" value="{{ search_week_commencing | default('') }}">
+                    </div>
+
+                    <div class="form-group search-actions">
+                        <label>&nbsp;</label>
+                        <div class="button-group">
+                            <button type="button" class="btn-search" onclick="fetchIngredients()">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <button type="button" class="btn-clear" onclick="clearSearch()">
+                                <i class="fas fa-times"></i> Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div id="item_code_suggestions" class="suggestion-list"></div>
+        </div>
+    </section>
+
+    <section id="column-toggle">
+        <h3>Column Visibility</h3>
+        <div class="column-toggle">
+            <div class="toggle-row">
+                <label><input type="checkbox" checked data-col-index="1" onchange="toggleColumn(1)"> Week Commencing</label>
+                <label><input type="checkbox" checked data-col-index="2" onchange="toggleColumn(2)"> Stocktake Type</label>
+                <label><input type="checkbox" checked data-col-index="3" onchange="toggleColumn(3)"> User</label>
+                <label><input type="checkbox" checked data-col-index="6" onchange="toggleColumn(6)"> UOM</label>
+                <label><input type="checkbox" checked data-col-index="7" onchange="toggleColumn(7)"> Department</label>
+            </div>
+            <div class="toggle-row">
+                <label><input type="checkbox" data-col-index="9" onchange="toggleColumn(9)"> Min Level</label>
+                <label><input type="checkbox" data-col-index="10" onchange="toggleColumn(10)"> Max Level</label>
+                <label><input type="checkbox" checked data-col-index="11" onchange="toggleColumn(11)"> Order Quantity</label>
+                <label><input type="checkbox" checked data-col-index="12" onchange="toggleColumn(12)"> $/UOM</label>
+                <label><input type="checkbox" data-col-index="13" onchange="toggleColumn(13)"> $/KG</label>
+            </div>
+            <div class="toggle-row">
+                <label><input type="checkbox" checked data-col-index="14" onchange="toggleColumn(14)"> Stock Value</label>
+                <label><input type="checkbox" data-col-index="15" onchange="toggleColumn(15)"> Notes</label>
+            </div>
+            <div class="toggle-actions">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="showEssentialColumns()">Show Essential Only</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="showAllColumns()">Show All</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="resetToDefault()">Reset to Default</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="list">
+        <h2>Raw Material Stocktake Records</h2>
+        <div class="d-flex gap-2 mb-3">
+            <a href="{{ url_for('ingredients.ingredients_create') }}" class="btn btn-primary">Add New Stocktake</a>
+            <a href="{{ url_for('ingredients.ingredients_upload') }}" class="btn btn-success">Upload Ingredients</a>
+            <a href="{{ url_for('ingredients.ingredients_download_template') }}" class="btn btn-info">Download Template</a>
+            <a href="{{ url_for('ingredients.ingredients_download_excel') }}" class="btn btn-warning">Download Excel</a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div id="resultSection" class="table-container">
+            <table class="table table-bordered" id="ingredientsListTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th class="sortable" data-column="week_commencing">Week Commencing <span class="sort-icon"></span></th>
+                        <th class="sortable" data-column="stocktake_type">Stocktake Type <span class="sort-icon"></span></th>
+                        <th class="sortable" data-column="user">User <span class="sort-icon"></span></th>
+                        <th class="sortable" data-column="item_code">Item Code <span class="sort-icon"></span></th>
+                        <th>Description</th>
+                        <th>UOM</th>
+                        <th>Department</th>
+                        <th class="sortable" data-column="current_stock">Current Stock <span class="sort-icon"></span></th>
+                        <th>Min Level</th>
+                        <th>Max Level</th>
+                        <th class="sortable" data-column="order_quantity">Order <span class="sort-icon"></span></th>
+                        <th class="sortable" data-column="price_uom">$/UOM <span class="sort-icon"></span></th>
+                        <th>$/KG</th>
+                        <th class="sortable" data-column="stock_value">Stock Value <span class="sort-icon"></span></th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stocktake in stocktakes %}
+                    <tr data-id="{{ stocktake.id }}">
+                        <td>{{ stocktake.id or '' }}</td>
+                        <td>{{ stocktake.week_commencing_str }}</td>
+                        <td>{{ stocktake.stocktake_type or '' }}</td>
+                        <td>{{ stocktake.user or '' }}</td>
+                        <td>{{ stocktake.item_code or '' }}</td>
+                        <td>{{ stocktake.item.description if stocktake.item else '' }}</td>
+                        <td>{{ stocktake.item.uom.UOMName if stocktake.item and stocktake.item.uom else '' }}</td>
+                        <td>{{ stocktake.item.department.departmentName if stocktake.item and stocktake.item.department else '' }}</td>
+                        <td>{{ "{:.2f}".format(stocktake.current_stock) if stocktake.current_stock is not none else '' }}</td>
+                        <td>{{ "{:.2f}".format(stocktake.item.min_level) if stocktake.item and stocktake.item.min_level is not none else '' }}</td>
+                        <td>{{ "{:.2f}".format(stocktake.item.max_level) if stocktake.item and stocktake.item.max_level is not none else '' }}</td>
+                        <td>{{ "{:.2f}".format(stocktake.order_quantity) if stocktake.order_quantity is not none else '' }}</td>
+                        <td>{{ "${:.2f}".format(stocktake.price_uom) if stocktake.price_uom is not none else '' }}</td>
+                        <td>{{ "${:.2f}".format(stocktake.item.price_per_kg) if stocktake.item and stocktake.item.price_per_kg is not none else '' }}</td>
+                        <td class="stock-value-highlight">{{ "${:.2f}".format(stocktake.stock_value) if stocktake.stock_value is not none else '' }}</td>
+                        <td>{{ stocktake.notes or '' }}</td>
+                        <td>
+                            <a href="{{ url_for('ingredients.stocktake_edit', id=stocktake.id) }}" class="btn btn-warning btn-sm" target="_blank" rel="noopener noreferrer">Edit</a>
+                            <form action="{{ url_for('ingredients.stocktake_delete', id=stocktake.id) }}" method="post" style="display:inline-block;">
+                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this stocktake record?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="table-total-row">
+                        <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+                        <td class="stock-value-total"><strong id="totalStockValue">$0.00</strong></td>
+                        <td></td><td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+</div>
+
+<style>
+    .suggestion-list {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .sortable {
+        cursor: pointer;
+        position: relative;
+    }
+
+    .sort-icon::after {
+        content: '\2195'; /* Up/down arrow */
+        margin-left: 5px;
+        opacity: 0.3;
+    }
+
+    .sort-asc .sort-icon::after {
+        content: '\2191'; /* Up arrow */
+        opacity: 1;
+    }
+
+    .sort-desc .sort-icon::after {
+        content: '\2193'; /* Down arrow */
+        opacity: 1;
+    }
+
+    #list {
+        margin-top: 0;
+    }
+
+    #list h2 {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .search-container {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        border: 1px solid #dee2e6;
+        margin-bottom: 25px;
+    }
+
+    #search h2 {
+        color: #495057;
+        margin-bottom: 20px;
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+
+    #search h2 i {
+        color: #007bff;
+        margin-right: 8px;
+    }
+
+    .search-row {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+        align-items: end;
+    }
+
+    .search-row:last-child {
+        grid-template-columns: 1fr 1fr;
+        margin-bottom: 0;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #495057;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-group label i {
+        margin-right: 6px;
+        color: #007bff;
+        width: 16px;
+    }
+
+    .form-group input,
+    .form-group select {
+        padding: 10px 12px;
+        border: 2px solid #e9ecef;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        background-color: white;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
+
+    .form-group input::placeholder {
+        color: #adb5bd;
+        font-style: italic;
+    }
+
+    .search-actions {
+        display: flex;
+        flex-direction: column;
+        justify-content: end;
+    }
+
+    .search-actions label {
+        visibility: hidden;
+        margin-bottom: 6px;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-search, .btn-clear {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 100px;
+    }
+
+    .btn-search {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+    }
+
+    .btn-search:hover {
+        background: linear-gradient(135deg, #0056b3, #004494);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
+    }
+
+    .btn-clear {
+        background: linear-gradient(135deg, #6c757d, #545b62);
+        color: white;
+        box-shadow: 0 2px 4px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-clear:hover {
+        background: linear-gradient(135deg, #545b62, #495057);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
+    }
+
+    .btn-search i, .btn-clear i {
+        margin-right: 6px;
+    }
+
+    @media (max-width: 992px) {
+        .search-row {
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .search-row:last-child {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .search-container {
+            padding: 20px;
+        }
+        
+        .search-row {
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+        
+        .search-row:last-child {
+            grid-template-columns: 1fr;
+        }
+        
+        .button-group {
+            flex-direction: column;
+            gap: 8px;
+        }
+    }
+    
+    .stock-value-highlight {
+        background-color: #e8f5e8 !important;
+        font-weight: bold;
+        color: #155724;
+    }
+
+    .table-total-row {
+        background-color: #f8f9fa !important;
+        border-top: 3px solid #007bff !important;
+    }
+
+    .table-total-row td {
+        border-top: 3px solid #007bff !important;
+        padding: 12px 8px;
+        font-size: 1.1rem;
+    }
+
+    .stock-value-total {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+        text-align: center;
+    }
+
+    /* Column Toggle Styles */
+    #column-toggle {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    #column-toggle h3 {
+        color: #495057;
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+
+    .column-toggle {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+    .toggle-row label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 14px;
+        color: #495057;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 4px;
+        transition: background-color 0.2s;
+        min-width: 150px;
+    }
+
+    .toggle-row label:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+    }
+
+    .toggle-row input[type="checkbox"] {
+        margin: 0;
+        cursor: pointer;
+    }
+
+    .toggle-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        flex-wrap: wrap;
+    }
+
+    .toggle-actions button {
+        padding: 6px 12px;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .toggle-row {
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toggle-row label {
+            min-width: auto;
+        }
+
+        .toggle-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    let sortBy = '{{ sort_by | default("id") }}';
+    let sortDirection = '{{ sort_direction | default("asc") }}';
+
+    if (sortBy) {
+        $(`.sortable[data-column="${sortBy}"]`).addClass(`sort-${sortDirection}`);
+    }
+
+    // Autocomplete for Item Code
+    $("#search_item_code").keyup(function() {
+        var itemCode = $(this).val().trim();
+        if (itemCode.length > 0) {
+            $.ajax({
+                url: "{{ url_for('ingredients.autocomplete_ingredients') }}",
+                type: "GET",
+                data: { query: itemCode },
+                success: function(response) {
+                    var suggestionsHtml = "<ul>";
+                    response.forEach(function(ingredient) {
+                        suggestionsHtml += `<li data-item-code="${ingredient.item_code}" data-description="${ingredient.description}">${ingredient.item_code} - ${ingredient.description}</li>`;
+                    });
+                    suggestionsHtml += "</ul>";
+                    $("#item_code_suggestions").html(suggestionsHtml);
+                },
+                error: function() {
+                    $("#item_code_suggestions").empty();
+                }
+            });
+        } else {
+            $("#item_code_suggestions").empty();
+        }
+    });
+
+    $(document).on("click", "#item_code_suggestions li", function() {
+        $("#search_item_code").val($(this).data("item-code"));
+        $("#search_description").val($(this).data("description"));
+        $("#item_code_suggestions").empty();
+        fetchIngredients();
+    });
+
+    $(document).click(function(event) {
+        if (!$(event.target).closest("#search_item_code, #item_code_suggestions").length) {
+            $("#item_code_suggestions").empty();
+        }
+    });
+
+    $('.sortable').click(function() {
+        var column = $(this).data('column');
+        if (sortBy === column) {
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortBy = column;
+            sortDirection = 'asc';
+        }
+        $('.sortable').removeClass('sort-asc sort-desc');
+        $(this).addClass(`sort-${sortDirection}`);
+        fetchIngredients();
+    });
+
+    const baseEditUrl = "{{ url_for('ingredients.stocktake_edit', id=0) }}".replace('/0', '');
+    const baseDeleteUrl = "{{ url_for('ingredients.stocktake_delete', id=0) }}".replace('/0', '');
+
+    function fetchIngredients() {
+        var itemCode = $("#search_item_code").val().trim();
+        var description = $("#search_description").val().trim();
+        var category = $("#search_category").val().trim();
+        var weekCommencing = $("#search_week_commencing").val().trim();
+
+        var sortBy = $('.sortable.sort-asc, .sortable.sort-desc').data('column') || 'id';
+        var sortDirection = $('.sortable.sort-asc').length > 0 ? 'asc' : $('.sortable.sort-desc').length > 0 ? 'desc' : '{{ sort_direction | default("asc") }}';
+
+        $.ajax({
+            url: "{{ url_for('ingredients.get_search_stocktakes') }}",
+            type: "GET",
+            data: {
+                item_code: itemCode,
+                description: description,
+                category: category,
+                week_commencing: weekCommencing,
+                sort_by: sortBy,
+                sort_direction: sortDirection
+            },
+            success: function(response) {
+                var tableBody = $("#ingredientsListTable tbody");
+                tableBody.empty();
+                $("#resultSection").removeClass("hidden");
+
+                if (response.length === 0) {
+                    tableBody.append(`
+                        <tr>
+                            <td colspan="17">
+                                <div class="no-results">
+                                    <p>No stocktake records found for Item Code: ${itemCode || 'Any'}, Description: ${description || 'Any'}</p>
+                                    <button class="add-ingredient-btn" onclick="addStocktake('${itemCode}')">
+                                        Add Stocktake for Item Code ${itemCode || 'New'}
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                    return;
+                }
+
+                response.forEach(function(stocktake) {
+                    if (stocktake.id !== null && stocktake.id !== undefined) {
+                        const editUrl = `${baseEditUrl}/${stocktake.id}`;
+                        const deleteUrl = `${baseDeleteUrl}/${stocktake.id}`;
+
+                        tableBody.append(`
+                            <tr data-id="${stocktake.id}">
+                                <td>${stocktake.id || ''}</td>
+                                <td>${stocktake.week_commencing || ''}</td>
+                                <td>${stocktake.stocktake_type || ''}</td>
+                                <td>${stocktake.user || ''}</td>
+                                <td>${stocktake.item_code || ''}</td>
+                                <td>${stocktake.description || ''}</td>
+                                <td>${stocktake.uom || ''}</td>
+                                <td>${stocktake.department || ''}</td>
+                                <td>${stocktake.current_stock ? parseFloat(stocktake.current_stock).toFixed(2) : ''}</td>
+                                <td>${stocktake.min_level ? parseFloat(stocktake.min_level).toFixed(2) : ''}</td>
+                                <td>${stocktake.max_level ? parseFloat(stocktake.max_level).toFixed(2) : ''}</td>
+                                <td>${stocktake.order_quantity ? parseFloat(stocktake.order_quantity).toFixed(2) : ''}</td>
+                                <td>${stocktake.price_uom ? '$' + parseFloat(stocktake.price_uom).toFixed(2) : ''}</td>
+                                <td>${stocktake.price_kg ? '$' + parseFloat(stocktake.price_kg).toFixed(2) : ''}</td>
+                                <td class="stock-value-highlight">${stocktake.stock_value ? '$' + parseFloat(stocktake.stock_value).toFixed(2) : ''}</td>
+                                <td>${stocktake.notes || ''}</td>
+                                <td>
+                                   <a href="${editUrl}" class="btn btn-warning btn-sm" target="_blank" rel="noopener noreferrer">Edit</a>
+                                    <form action="${deleteUrl}" method="post" style="display:inline-block;">
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this stocktake record?')">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        `);
+                    }
+                });
+
+                // Apply column visibility after data is loaded
+                applyColumnVisibility();
+                
+                // Calculate and display total stock value
+                calculateTotalStockValue();
+            },
+            error: function(xhr) {
+                console.error('AJAX error:', xhr.responseText);
+                var tableBody = $("#ingredientsListTable tbody");
+                tableBody.empty();
+                tableBody.append(`
+                    <tr>
+                        <td colspan="17" class="no-results">Error fetching stocktake records: ${xhr.responseText}</td>
+                    </tr>
+                `);
+            }
+        });
+    }
+
+    function addStocktake(itemCode) {
+        window.location.href = `{{ url_for('ingredients.ingredients_create') }}?item_code=${itemCode}`;
+    }
+
+    // Make addStocktake globally available
+    window.addStocktake = addStocktake;
+
+    // Bind search button click event
+    $('#searchForm button[type="button"]').click(function() {
+       console.log('Search button clicked');
+       fetchIngredients();
+    });
+
+    // Initial call to fetch ingredients on page load
+    fetchIngredients();
+
+    // Initialize column visibility on page load
+    initializeColumnVisibility();
+    
+    // Calculate initial total stock value
+    calculateTotalStockValue();
+});
+
+// Function to calculate and display total stock value
+function calculateTotalStockValue() {
+    let total = 0;
+    const stockValueCells = document.querySelectorAll('#ingredientsListTable tbody tr td:nth-child(15)');
+    
+    stockValueCells.forEach(function(cell) {
+        const value = cell.textContent.trim();
+        if (value && value !== '') {
+            // Remove $ sign and convert to number
+            const numericValue = parseFloat(value.replace('$', '').replace(',', ''));
+            if (!isNaN(numericValue)) {
+                total += numericValue;
+            }
+        }
+    });
+    
+    // Update the total display
+    const totalElement = document.getElementById('totalStockValue');
+    if (totalElement) {
+        totalElement.textContent = '$' + total.toFixed(2);
+    }
+}
+
+// Clear search function
+function clearSearch() {
+    $("#search_item_code").val('');
+    $("#search_description").val('');
+    $("#search_category").val('');
+    $("#search_week_commencing").val('');
+    $("#item_code_suggestions").empty();
+    
+    // Reset sorting
+    $('.sortable').removeClass('sort-asc sort-desc');
+    sortBy = 'id';
+    sortDirection = 'asc';
+    
+    // Fetch all ingredients
+    fetchIngredients();
+}
+
+// Column visibility functions
+function toggleColumn(colIndex) {
+    const table = document.getElementById('ingredientsListTable');
+    const isVisible = document.querySelector(`input[data-col-index="${colIndex}"]`).checked;
+    
+    // Toggle header
+    const headerCell = table.rows[0].cells[colIndex];
+    if (headerCell) {
+        headerCell.style.display = isVisible ? '' : 'none';
+    }
+    
+    // Toggle data cells in tbody
+    const tbody = table.querySelector('tbody');
+    if (tbody) {
+        for (let i = 0; i < tbody.rows.length; i++) {
+            const cell = tbody.rows[i].cells[colIndex];
+            if (cell) {
+                cell.style.display = isVisible ? '' : 'none';
+            }
+        }
+    }
+    
+    // Toggle footer cells
+    const tfoot = table.querySelector('tfoot');
+    if (tfoot && tfoot.rows.length > 0) {
+        const footerCell = tfoot.rows[0].cells[colIndex];
+        if (footerCell) {
+            footerCell.style.display = isVisible ? '' : 'none';
+        }
+    }
+}
+
+function showEssentialColumns() {
+    // Essential columns: ID, Item Code, Description, Current Stock, Actions
+    const essentialColumns = [0, 4, 5, 8, 16];
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        const isEssential = essentialColumns.includes(colIndex);
+        checkbox.checked = isEssential;
+        toggleColumn(colIndex);
+    });
+}
+
+function showAllColumns() {
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        toggleColumn(colIndex);
+    });
+}
+
+function resetToDefault() {
+    // Default visible columns based on the initial state
+    const defaultColumns = {
+        1: true,  // Week Commencing
+        2: true,  // Stocktake Type
+        3: true,  // User
+        6: true,  // UOM
+        7: true,  // Department
+        9: false, // Min Level
+        10: false, // Max Level
+        11: true,  // Order Quantity
+        12: true,  // $/UOM
+        13: false, // $/KG
+        14: true,  // Stock Value
+        15: false  // Notes
+    };
+    
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        checkbox.checked = defaultColumns[colIndex] !== false;
+        toggleColumn(colIndex);
+    });
+}
+
+function initializeColumnVisibility() {
+    // Set initial visibility based on checkbox states
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        toggleColumn(colIndex);
+    });
+}
+
+function applyColumnVisibility() {
+    // Re-apply column visibility after table data is refreshed
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        const isVisible = checkbox.checked;
+        
+        const table = document.getElementById('ingredientsListTable');
+        
+        // Toggle header
+        const headerCell = table.rows[0].cells[colIndex];
+        if (headerCell) {
+            headerCell.style.display = isVisible ? '' : 'none';
+        }
+        
+        // Toggle data cells in tbody
+        const tbody = table.querySelector('tbody');
+        if (tbody) {
+            for (let i = 0; i < tbody.rows.length; i++) {
+                const cell = tbody.rows[i].cells[colIndex];
+                if (cell) {
+                    cell.style.display = isVisible ? '' : 'none';
+                }
+            }
+        }
+        
+        // Toggle footer cells
+        const tfoot = table.querySelector('tfoot');
+        if (tfoot && tfoot.rows.length > 0) {
+            const footerCell = tfoot.rows[0].cells[colIndex];
+            if (footerCell) {
+                footerCell.style.display = isVisible ? '' : 'none';
+            }
+        }
+    });
+}
+</script>
+{% endblock %} 

@@ -1,0 +1,248 @@
+/* General Styles */
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #2ecc71;
+    --danger-color: #e74c3c;
+    --background-color: #f8f9fa;
+    --border-color: #dee2e6;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--background-color);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Styles */
+h1 {
+    color: var(--primary-color);
+    margin-bottom: 30px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+h3 {
+    color: var(--primary-color);
+    margin: 25px 0 15px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.3s;
+}
+
+.btn-primary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+/* Table Styles */
+.table-container {
+    overflow-x: auto;
+    margin: 20px 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+    background-color: white;
+}
+
+th, td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+tr:hover {
+    background-color: #f2f2f2;
+}
+
+/* Nested Table Styles */
+.nested-table {
+    margin: 10px 0;
+    background-color: transparent;
+    border: none;
+}
+
+.nested-table td {
+    padding: 8px;
+    border: none;
+    white-space: nowrap;
+}
+
+/* Details Element Styles */
+details {
+    margin: 5px 0;
+}
+
+details summary {
+    cursor: pointer;
+    color: var(--secondary-color);
+    font-weight: 500;
+    padding: 5px 0;
+}
+
+details summary:hover {
+    color: #2980b9;
+}
+
+/* Form Styles */
+.form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-section {
+    margin: 25px 0;
+    padding-top: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+select.form-control {
+    height: 38px;
+}
+
+.form-actions {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Alert Styles */
+.alert {
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* Grid Layout for Create Form */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .table-container {
+        margin: 10px -20px;
+        border-radius: 0;
+    }
+    
+    th, td {
+        padding: 8px 10px;
+    }
+    
+    .form-container {
+        padding: 20px;
+        margin: 0 -20px;
+        border-radius: 0;
+    }
+    
+    .nested-table td {
+        padding: 4px;
+        font-size: 13px;
+    }
+} 

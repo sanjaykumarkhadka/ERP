@@ -1,0 +1,318 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div style="width: 100%">
+    <!-- Production Search Section -->
+    <section id="search">
+        <h2>Production Search</h2>
+        <form id="searchForm" onsubmit="return false;">
+            <div class="form-group">
+                <label for="search_production_code">Production Code:</label>
+                <input type="text" id="search_production_code" name="production_code" value="{{ search_production_code | default('') }}" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label for="search_description">Description:</label>
+                <input type="text" id="search_description" name="description" value="{{ search_description | default('') }}">
+            </div>            <div class="form-group">
+                <label for="search_production_date_start">Production Date (From):</label>
+                <input type="date" id="search_production_date_start" name="production_date_start" value="{{ search_production_date_start | default('') }}">
+            </div>
+            <div class="form-group">
+                <label for="search_production_date_end">Production Date (To):</label>
+                <input type="date" id="search_production_date_end" name="production_date_end" value="{{ search_production_date_end | default('') }}">
+            </div>
+            <div class="form-group">
+                <label for="search_week_commencing">Week Commencing:</label>
+                <input type="date" id="search_week_commencing" name="week_commencing" value="{{ search_week_commencing | default('') }}">
+            </div>
+            <button type="button" onclick="fetchProductions()">Search</button>
+            <button type="button" class="btn btn-primary" onclick="exportToExcel()">Export to Excel</button>
+            <div id="production_code_suggestions" class="suggestion-list"></div>
+        </form>
+    </section>
+
+    <!-- Production List Section -->
+    <section id="list">
+        <h2>Production List</h2>
+        <div class="btn-group mb-3" role="group">
+            <a href="{{ url_for('production.production_create') }}" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add New Production Entry
+            </a>
+            <a href="{{ url_for('production.production_usage') }}" class="btn btn-secondary">
+                <i class="fas fa-chart-line"></i> Usage Report
+            </a>
+            <a href="{{ url_for('production.production_raw_material_report') }}" class="btn btn-primary">
+                <i class="fas fa-file-alt"></i> Raw Material Report
+            </a>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div id="resultSection" class="table-container">
+            <table class="table table-bordered" id="productionListTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Week Commencing</th>
+                        <th>Production Date</th>
+                        <th>Production Code</th>
+                        <th>Description</th>
+                        <th>Batches</th>
+                        <th>Total KG</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for production in productions %}
+                    <tr>
+                        <td>{{ production.id }}</td>
+                        <td class="date-column">{{ production.week_commencing }}</td>
+                        <td class="date-column">{{ production.production_date }}</td>
+                        <td>{{ production.production_code }}</td>
+                        <td>{{ production.description or (production.item.item_code + ' - ' + production.item.description if production.item else 'None') }}</td>
+                        <td>{{ production.batches }}</td>
+                        <td>{{ "%.2f"|format(production.total_kg|float) }}</td>
+                        <td>
+                            <a href="{{ url_for('production.production_edit', id=production.id) }}" class="btn btn-warning btn-sm">Edit</a>
+                            <a href="{{ url_for('production.production_delete', id=production.id) }}" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this production?')">Delete</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="no-results">No production entries found.</td>
+                    </tr>
+                    {% endfor %}
+                    {% if productions %}
+                    <tr class="table-info font-weight-bold">
+                        <td colspan="6" style="text-align: right;"><strong>Total:</strong></td>
+                        <td><strong>{{ total_kg | round(2) }}</strong></td>
+                        <td></td>
+                    </tr>
+                    {% if recipe_family_totals %}
+                    <tr class="table-secondary">
+                        <td colspan="8"><strong>Totals by Recipe Family:</strong></td>
+                    </tr>
+                    {% for recipe_family, family_total in recipe_family_totals.items() %}
+                    <tr class="table-secondary">
+                        <td colspan="6" style="text-align: right;">{{ recipe_family }}:</td>
+                        <td>{{ family_total | round(2) }}</td>
+                        <td></td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<style>
+    .suggestion-list {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        max-height: 200px;
+        overflow-y: auto;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .suggestion-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .suggestion-list li {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+    .suggestion-list li:hover {
+        background-color: #f5f5f5;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .table-container {
+        overflow-x: auto;
+    }
+    .no-results {
+        text-align: center;
+        padding: 20px;
+    }
+    .add-production-btn {
+        background-color: #007bff;
+        color: white;
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .add-production-btn:hover {
+        background-color: #0056b3;
+    }
+    .hidden {
+        display: none;
+    }
+    #list {
+        margin-top: 0;
+    }
+    
+    #list h2 {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .font-weight-bold {
+        font-weight: bold;
+    }
+    
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Autocomplete for Production Code
+        $("#search_production_code").keyup(function() {
+            var productionCode = $(this).val().trim();
+            if (productionCode.length > 0) {
+                $.ajax({
+                    url: "{{ url_for('production.autocomplete_production') }}",
+                    type: "GET",
+                    data: { query: productionCode },
+                    success: function(response) {
+                        var suggestionsHtml = "<ul>";
+                        response.forEach(function(production) {
+                            suggestionsHtml += `<li data-production-code="${production.production_code}" data-description="${production.description}">${production.production_code} - ${production.description}</li>`;
+                        });
+                        suggestionsHtml += "</ul>";
+                        $("#production_code_suggestions").html(suggestionsHtml);
+                    },
+                    error: function() {
+                        $("#production_code_suggestions").empty();
+                    }
+                });
+            } else {
+                $("#production_code_suggestions").empty();
+            }
+        });
+
+        // Handle suggestion click
+        $(document).on("click", "#production_code_suggestions li", function() {
+            $("#search_production_code").val($(this).data("production-code"));
+            $("#search_description").val($(this).data("description"));
+            $("#production_code_suggestions").empty();
+        });
+
+        // Hide suggestions when clicking outside
+        $(document).on("click", function(e) {
+            if (!$(e.target).closest("#search_production_code, #production_code_suggestions").length) {
+                $("#production_code_suggestions").empty();
+            }
+        });
+
+        // Add date range validation
+        $("#search_production_date_start, #search_production_date_end").change(function() {
+            var startDate = $("#search_production_date_start").val();
+            var endDate = $("#search_production_date_end").val();
+            
+            if (startDate && endDate && startDate > endDate) {
+                alert("End date must be after start date");
+                $(this).val('');
+            }
+        });
+
+        // Add week commencing date validation
+        $("#search_week_commencing").on('change', function() {
+            const selectedDate = $(this).val();
+            if (selectedDate) {
+                const mondayDate = getMonday(selectedDate);
+                if (selectedDate !== mondayDate) {
+                    $(this).val(mondayDate);
+                    alert("Week commencing date has been adjusted to Monday: " + mondayDate);
+                }
+            }
+        });
+
+        // Format dates in the table
+        function formatDates() {
+            $('.date-column').each(function() {
+                var dateStr = $(this).text().trim();
+                if (dateStr && dateStr !== '-') {
+                    // Convert from YY-MM-DD to DD-MM-YYYY
+                    var parts = dateStr.split('-');
+                    if (parts.length === 3) {
+                        var year = parts[0].length === 2 ? '20' + parts[0] : parts[0];
+                        var month = parts[1];
+                        var day = parts[2];
+                        $(this).text(day + '-' + month + '-' + year);
+                    }
+                }
+            });
+        }
+
+        // Call on page load
+        formatDates();
+
+        // Initialize datepicker for filters
+        $('.datepicker').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true
+        });
+
+        // Format dates when table is redrawn
+        $('#productionListTable').on('draw.dt', function() {
+            formatDates();
+        });
+    });
+
+    // Function to add a new production entry
+    function addProduction(productionCode) {
+        window.location.href = `{{ url_for('production.production_create') }}?production_code=${productionCode}`;
+    }
+
+    // Fetch production list based on search criteria
+    function fetchProductions() {
+        var searchData = {
+            production_code: $("#search_production_code").val(),
+            description: $("#search_description").val(),
+            week_commencing: $("#search_week_commencing").val(),
+            production_date_start: $("#search_production_date_start").val(),
+            production_date_end: $("#search_production_date_end").val()
+        };
+
+        window.location.href = "{{ url_for('production.production_list') }}?" + $.param(searchData);
+    }
+
+    // Export to Excel based on current filters
+    function exportToExcel() {
+        var searchData = {
+            production_code: $("#search_production_code").val(),
+            description: $("#search_description").val(),
+            week_commencing: $("#search_week_commencing").val(),
+            production_date_start: $("#search_production_date_start").val(),
+            production_date_end: $("#search_production_date_end").val()
+        };
+
+        window.location.href = "{{ url_for('production.export_productions_excel') }}?" + $.param(searchData);
+    }
+
+    // Add this function after the document ready block
+    function getMonday(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is sunday
+        return new Date(d.setDate(diff)).toISOString().split('T')[0];
+    }
+
+</script>
+{% endblock %}

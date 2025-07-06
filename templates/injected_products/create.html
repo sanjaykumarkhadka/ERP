@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Injected Product</title>
+</head>
+<body>
+    <header>
+        <h1>Create Injected Product</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('injected_products.injected_products_list') }}">Injected Products</a></li>
+                <li><a href="{{ url_for('injected_products.injected_products_create') }}">Create Injected Product</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Create Injected Product</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('injected_products.injected_products_create') }}" method="POST">
+            <div>
+                <label for="product_id">Product (FG):</label>
+                <select id="product_id" name="product_id" required>
+                    <option value="">Select Finished Good</option>
+                    {% for fg in finished_goods %}
+                    <option value="{{ fg.id }}">{{ fg.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="injection_rate">Injection Rate (%):</label>
+                <input type="number" id="injection_rate" name="injection_rate" step="0.01" required>
+            </div>
+            <button type="submit">Create</button>
+        </form>
+    </main>
+</body>
+</html>

@@ -1,0 +1,234 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Edit Stocktake Record</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="POST" action="{{ url_for('ingredients.stocktake_edit', id=stocktake.id) }}" id="stocktakeForm">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="week_commencing">Week Commencing</label>
+                    <input type="date" class="form-control" id="week_commencing" name="week_commencing" 
+                           value="{{ stocktake.week_commencing.strftime('%Y-%m-%d') if stocktake.week_commencing else '' }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="stocktake_type">Stocktake Type</label>
+                    <select class="form-control" id="stocktake_type" name="stocktake_type" required>
+                        <option value="">Select Stocktake Type</option>
+                        <option value="weekly" {% if stocktake.stocktake_type == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if stocktake.stocktake_type == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="annual" {% if stocktake.stocktake_type == 'annual' %}selected{% endif %}>Annual</option>
+                        <option value="obsolete" {% if stocktake.stocktake_type == 'obsolete' %}selected{% endif %}>Obsolete</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="user">User</label>
+            <input type="text" class="form-control" id="user" name="user" value="{{ stocktake.user or '' }}" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="category_id">Category</label>
+            <select class="form-control" id="category_id" name="category_id">
+                <option value="">Select Category</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if stocktake.category_id == category.id %}selected{% endif %}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="item_code">Item Code</label>
+                    <input type="text" class="form-control" id="item_code" name="item_code" 
+                           value="{{ stocktake.item_code }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <input type="text" class="form-control" id="description" name="description" 
+                           value="{{ stocktake.item.description if stocktake.item else '' }}" readonly>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="uom">UOM</label>
+                    <input type="text" class="form-control" id="uom" name="uom" 
+                           value="{{ stocktake.item.uom.UOMName if stocktake.item and stocktake.item.uom else '' }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="department">Department</label>
+                    <input type="text" class="form-control" id="department" name="department" 
+                           value="{{ stocktake.item.department.departmentName if stocktake.item and stocktake.item.department else '' }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="current_stock">Current Stock</label>
+                    <input type="number" step="0.01" class="form-control" id="current_stock" name="current_stock" 
+                           value="{{ stocktake.current_stock or 0 }}" required onchange="calculateStockValue()">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="order_quantity">Order Quantity</label>
+                    <input type="number" step="0.01" class="form-control" id="order_quantity" name="order_quantity" 
+                           value="{{ stocktake.order_quantity or 0 }}">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="min_level">Min Level</label>
+                    <input type="number" step="0.01" class="form-control" id="min_level" name="min_level" 
+                           value="{{ stocktake.item.min_level or 0 if stocktake.item else 0 }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="max_level">Max Level</label>
+                    <input type="number" step="0.01" class="form-control" id="max_level" name="max_level" 
+                           value="{{ stocktake.item.max_level or 0 if stocktake.item else 0 }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="price_uom">$/UOM</label>
+                    <input type="number" step="0.01" class="form-control" id="price_uom" name="price_uom" 
+                           value="{{ stocktake.price_uom or 0 }}" onchange="calculateStockValue()">
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="price_kg">$/KG</label>
+                    <input type="number" step="0.01" class="form-control" id="price_kg" name="price_kg" 
+                           value="{{ stocktake.item.price_per_kg or 0 if stocktake.item else 0 }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="form-group">
+                    <label for="stock_value">Stock Value</label>
+                    <input type="number" step="0.01" class="form-control form-control-lg" id="stock_value" name="stock_value" 
+                           value="{{ stocktake.stock_value or 0 }}" readonly 
+                           style="font-size: 1.2rem; font-weight: bold; background-color: #e8f5e8;">
+                    <small class="form-text text-muted">Auto-calculated: Current Stock × $/UOM</small>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="2">{{ stocktake.notes or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Update Stocktake Record</button>
+        <a href="{{ url_for('ingredients.ingredients_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<style>
+    .form-text {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #495057;
+    }
+    
+    .form-control:read-only {
+        background-color: #f8f9fa;
+        opacity: 1;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+        font-weight: 500;
+    }
+    
+    .btn-secondary {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        font-weight: 500;
+    }
+</style>
+
+<script>
+// Calculate stock value
+function calculateStockValue() {
+    const currentStock = parseFloat(document.getElementById('current_stock').value) || 0;
+    const priceUom = parseFloat(document.getElementById('price_uom').value) || 0;
+    const stockValue = currentStock * priceUom;
+    document.getElementById('stock_value').value = stockValue.toFixed(2);
+}
+
+// Form validation
+document.getElementById('stocktakeForm').addEventListener('submit', function(e) {
+    var weekCommencing = document.getElementById('week_commencing').value.trim();
+    var stocktakeType = document.getElementById('stocktake_type').value.trim();
+    var user = document.getElementById('user').value.trim();
+    var currentStock = parseFloat(document.getElementById('current_stock').value);
+    var priceUom = parseFloat(document.getElementById('price_uom').value);
+    
+    if (!weekCommencing || !stocktakeType || !user) {
+        e.preventDefault();
+        alert('Week commencing, stocktake type, and user are required fields.');
+        return;
+    }
+    
+    if (currentStock < 0 || priceUom < 0) {
+        e.preventDefault();
+        alert('Stock levels and prices must be non-negative numbers.');
+        return;
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate initial stock value
+    calculateStockValue();
+    
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(function() {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            if (alert.classList.contains('alert-dismissible')) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        });
+    }, 5000);
+});
+</script>
+{% endblock %} 

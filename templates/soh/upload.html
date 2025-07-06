@@ -1,0 +1,50 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Upload SOH Data</h2>
+
+    <!-- Feature Information -->
+    <div class="alert alert-info mb-4" role="alert">
+        <h5 class="alert-heading"><i class="fas fa-magic"></i> Automatic Packing Creation</h5>
+        <p class="mb-2">When you upload SOH data, the system will automatically:</p>
+        <ul class="mb-2">
+            <li><strong>Create packing entries</strong> for each product with calculated requirements</li>
+            <li><strong>Generate filling entries</strong> where applicable (for products with filling codes)</li>
+            <li><strong>Create production entries</strong> where applicable (for products with production codes)</li>
+        </ul>
+        <p class="mb-0"><small><i class="fas fa-info-circle"></i> This saves you time by eliminating the need to manually create packing entries for each product.</small></p>
+    </div>
+
+    <!-- Display flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-group mb-3">
+            <label for="file">Select File (CSV, XLSX, XLS)</label>
+            <input type="file" class="form-control" id="file" name="file" accept=".csv,.xlsx,.xls" required>
+        </div>
+        <div class="form-group mb-3">
+            <label for="sheet_name">Excel Sheet Name (if applicable)</label>
+            <input type="text" class="form-control" id="sheet_name" name="sheet_name" placeholder="e.g., SOH" value="SOH">
+        </div>
+        <div class="form-group mb-3">
+            <label for="week_commencing">Week Commencing (Optional)</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing">
+            <small class="form-text text-muted">If not specified, will use the Week Commencing dates from the uploaded file</small>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-upload"></i> Upload SOH Data & Create Packing Entries
+        </button>
+    </form>
+</div>
+{% endblock %}

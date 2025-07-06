@@ -1,0 +1,532 @@
+/* static/styles.css */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+main {
+    padding: 2rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #f5f5f5;
+}
+
+#itemTypeFormInner, 
+#categoryFormInner,
+#departmentFormInner,
+#machineFormInner{
+    display: flex;
+    align-items: center;
+	margin-bottom: 10px;
+}
+
+#itemTypeInputs,
+#categoryInputs,
+#departmentInputs,
+#machineInputs {
+    display: flex;
+    align-items: center;
+}
+
+#itemTypeFormInner label,
+#categoryFormInner label,
+#departmentFormInner label,
+#machineFormInner label {
+    margin-left: 5px;
+}
+
+.btn-red {
+    background-color: red;
+    color: white;
+}
+
+.btn-blue {
+    background-color: blue;
+    color: white;
+}
+
+.btn-green {
+    background-color: green;
+    color: white;
+}
+
+.recipe-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.recipe-item label, .recipe-item input, .recipe-item select {
+    margin-right: 10px;
+    margin-bottom: 5px;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 10px;
+}
+
+.button-group button {
+    margin-right: 10px;
+}
+
+.remove-ingredient {
+    margin-left: 10px;
+}
+/* Form Container */
+#itemForm {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+/* Form Group */
+.form-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+/* Labels */
+label {
+    min-width: 120px;
+    text-align: right;
+    margin-right: 10px;
+    font-weight: 500;
+}
+
+/* Inputs */
+input[type="text"],
+input[type="number"],
+select {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Buttons */
+button {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    background-color: #f0f0f0;
+    margin-left: 10px;
+}
+
+button[type="submit"] {
+    background-color: #4CAF50;
+    color: white;
+}
+
+button.remove-item {
+    background-color: #ff4444;
+    color: white;
+}
+
+/* Checkbox alignment */
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+input[type="checkbox"] {
+    margin: 0;
+}
+
+/* Add button alignment */
+.button-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Add this to your styles.css file */
+.popup-form {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+	background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 500px;  /* Adjust this value */
+    max-width: 90%; 
+}
+
+.popup-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    max-width: 500px;
+    width: 90%;
+}
+
+.error-popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+#errorPopup button {
+    margin-top: 15px;
+    padding: 8px 15px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#errorPopup button:hover {
+    background-color: #d32f2f;
+}
+
+/* Flash message styling */
+.flash-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 240000px;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.flash-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-left: 5px solid #f5c6cb;
+}
+
+.flash-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-left: 5px solid #c3e6cb;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    margin-left: 10px;
+    color: inherit;
+}
+
+#flashText {
+    flex-grow: 1;
+}
+
+
+.popup.show {
+  visibility: visible;
+  opacity: 1;
+}
+
+	
+#itemTypeForm form {
+    width: 650px; 
+}
+
+#categoryForm form {
+    width: 650px; 
+}
+
+#departmentForm form {
+    width: 700px; 
+}
+
+#machineForm form {
+    width: 650px; 
+}
+
+#uom-1Form form {
+    width: 950px; 
+}
+
+.error-popup {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.error-popup-content {
+    background-color: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    max-width: 450px;
+    width: 90%;
+    text-align: center;
+    position: relative;
+}
+
+.error-popup button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.suggestion-list {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.suggestion-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.suggestion-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.suggestion-list li:hover {
+    background-color: #f5f5f5;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.table-container {
+    overflow-x: auto;
+}
+.no-results {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+.suggestion-list {
+    position: absolute;
+    background: white;
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.suggestion-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.suggestion-list li {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+.suggestion-list li:hover {
+    background-color: #f5f5f5;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+.table-container {
+    overflow-x: auto;
+}
+.no-results {
+    text-align: center;
+    padding: 20px;
+}
+
+nav ul li.active a {
+    color: #fff;
+    background-color: #dc3545; 
+    font-weight: bold;
+}
+#search {
+    position: sticky;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: white;
+    z-index: 100;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+#list {
+    margin-top: var(--search-height, 110px); 
+}
+
+.form-control {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.card .form-control {
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Allergen Section Styles */
+.allergen-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+.allergen-label {
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.allergen-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    max-width: 100%;
+}
+
+.allergen-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 120px;
+    padding: 5px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.allergen-checkbox-wrapper:hover {
+    background-color: #f0f0f0;
+    border-color: #ccc;
+}
+
+.allergen-checkbox-wrapper input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.allergen-checkbox-wrapper label {
+    margin: 0;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    min-width: auto;
+    text-align: left;
+}
+
+/* Field Section Styles */
+.field-section {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    background-color: #fafafa;
+}
+
+.section-header {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #007bff;
+}

@@ -1,0 +1,797 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Item Master</h4>
+            <div class="d-flex gap-2">
+                <!-- Upload Excel Button -->
+                <div class="dropdown">
+                    <a class="btn btn-success" href="{{ url_for('item_master.item_master_upload') }}">
+                        <i class="fas fa-upload"></i> Upload Excel
+                    </a>
+                    <ul class="dropdown-menu d-none"><!-- Hidden, replaced by direct link --></ul>
+                </div>
+                <!-- Download Excel Button -->
+                <button class="btn btn-info" onclick="downloadExcel()">
+                    <i class="fas fa-download"></i> Download Excel
+                </button>
+                <button class="btn btn-primary" onclick="window.location.href='/item-master/create'">
+                    <i class="fas fa-plus"></i> Add New Item
+                </button>
+            </div>
+        </div>
+        
+        <!-- Hidden file input for Excel upload -->
+        <!-- <input type="file" id="excel-upload" accept=".xlsx,.xls" style="display: none;" onchange="uploadExcel()"> -->
+        
+        <div class="card-body">
+            <!-- Upload Progress Bar -->
+            <div id="upload-progress" class="progress mb-3" style="display: none;">
+                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <!-- Upload Status Message -->
+            <div id="upload-message" class="alert" style="display: none;"></div>
+
+            <!-- Column Toggle Section -->
+            <section id="column-toggle">
+                <h5>Column Visibility</h5>
+                <div class="column-toggle">
+                    <div class="toggle-row">
+                        <label><input type="checkbox" checked data-col-index="2" onchange="toggleColumn(2)"> Type</label>
+                        <label><input type="checkbox" checked data-col-index="3" onchange="toggleColumn(3)"> Category</label>
+                        <label><input type="checkbox" checked data-col-index="4" onchange="toggleColumn(4)"> Department</label>
+                        <label><input type="checkbox" checked data-col-index="5" onchange="toggleColumn(5)"> UOM</label>
+                        <label><input type="checkbox" data-col-index="6" onchange="toggleColumn(6)"> Min Level</label>
+                    </div>
+                    <div class="toggle-row">
+                        <label><input type="checkbox" data-col-index="7" onchange="toggleColumn(7)"> Max Level</label>
+                        <label><input type="checkbox" checked data-col-index="8" onchange="toggleColumn(8)"> Price/KG</label>
+                        <label><input type="checkbox" checked data-col-index="9" onchange="toggleColumn(9)"> Price/UOM</label>
+                        <label><input type="checkbox" data-col-index="10" onchange="toggleColumn(10)"> Supplier Name</label>
+                        <label><input type="checkbox" data-col-index="11" onchange="toggleColumn(11)"> Calc Factor</label>
+                        <label><input type="checkbox" data-col-index="12" onchange="toggleColumn(12)"> Units/Bag</label>
+                    </div>
+                    <div class="toggle-row">
+                        <label><input type="checkbox" data-col-index="13" onchange="toggleColumn(13)"> Avg Weight/Unit</label>
+                        <label><input type="checkbox" checked data-col-index="14" onchange="toggleColumn(14)"> Status</label>
+                    </div>
+                    <div class="toggle-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="showEssentialColumns()">Show Essential Only</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="showAllColumns()">Show All</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="resetToDefault()">Reset to Default</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Search Section -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="item_code_search">Item Code:</label>
+                        <input type="text" class="form-control" id="item_code_search" placeholder="Search by item code">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="search-description" class="form-label">Description</label>
+                        <input type="text" id="search-description" class="form-control" placeholder="Search by description">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="search-type" class="form-label">Type</label>
+                        <select id="search-type" class="form-select">
+                            <option value="">All</option>
+                            {% for item_type in item_types %}
+                                <option value="{{ item_type.type_name }}">{{ item_type.type_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-secondary w-100" onclick="searchItems()">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <button class="btn btn-outline-secondary w-100" type="button" onclick="resetFilters()">
+                                <i class="fas fa-undo"></i> Reset Filter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover" id="items-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="sortable-header" data-sort="item_code">
+                                Item Code <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="description">
+                                Description <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="item_type">
+                                Type <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="category">
+                                Category <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="department">
+                                Department <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="uom">
+                                UOM <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="min_level">
+                                Min Level <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="max_level">
+                                Max Level <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="price_per_kg">
+                                Price/KG <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="price_per_uom">
+                                Price/UOM <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th class="sortable-header" data-sort="supplier_name">
+                                Supplier <i class="fas fa-sort sort-icon"></i>
+                            </th>
+                            <th>User Info</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.35rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #000000;
+}
+
+.form-control, .form-select {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #d1d3e2;
+    border-radius: 0.35rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #bac8f3;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.35rem;
+}
+
+.btn-primary {
+    background-color: #4e73df;
+    border-color: #4e73df;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-success {
+    background-color: #1cc88a;
+    border-color: #1cc88a;
+}
+
+.btn-info {
+    background-color: #36b9cc;
+    border-color: #36b9cc;
+}
+
+.progress {
+    height: 1rem;
+    background-color: #f8f9fc;
+    border-radius: 0.35rem;
+}
+
+.progress-bar {
+    background-color: #4e73df;
+    transition: width 0.3s ease;
+}
+
+.table {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background-color: #f8f9fc;
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #000000
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(78, 115, 223, 0.05);
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.btn-edit {
+    background-color: #4e73df;
+    color: white;
+    margin-right: 0.25rem;
+}
+
+/* .btn-delete {
+    background-color: #e74a3b;
+    color: white;
+} */
+
+/* Sortable header styles */
+.sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 20px !important;
+}
+
+.sortable-header:hover {
+    background-color: #e3e6f0 !important;
+}
+
+.sort-icon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 0.75rem;
+}
+
+.sortable-header.sort-asc .sort-icon {
+    color: #4e73df;
+}
+
+.sortable-header.sort-desc .sort-icon {
+    color: #4e73df;
+}
+
+.sortable-header.sort-asc .sort-icon:before {
+    content: '\f0de'; /* fa-sort-up */
+}
+
+.sortable-header.sort-desc .sort-icon:before {
+    content: '\f0dd'; /* fa-sort-down */
+}
+
+.sort-icon:before {
+    content: "\f0dc"; /* fa-sort */
+}
+
+/* Column Toggle Styles */
+#column-toggle {
+    background: #f8f9fc;
+    border: 1px solid #e3e6f0;
+    border-radius: 0.35rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+#column-toggle h5 {
+    margin-bottom: 1rem;
+    color: #5a5c69;
+    font-weight: 600;
+}
+
+.column-toggle {
+    width: 100%;
+}
+
+.toggle-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.toggle-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #5a5c69;
+    cursor: pointer;
+    min-width: 150px;
+    margin: 0;
+}
+
+.toggle-row input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.toggle-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.toggle-actions button {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .toggle-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .toggle-row label {
+        min-width: auto;
+    }
+
+    .toggle-actions {
+        flex-direction: column;
+    }
+}
+
+.text-muted {
+    color: #6c757d !important;
+}
+
+.small {
+    font-size: 0.75rem;
+}
+
+.alert {
+    border-radius: 0.35rem;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+}
+</style>
+
+<script>
+// Global variables for sorting
+let currentSort = {
+    column: 'item_code',
+    order: 'asc'
+};
+
+function searchItems() {
+    const code = document.getElementById('item_code_search').value;
+    const description = document.getElementById('search-description').value;
+    const type = document.getElementById('search-type').value;
+    
+    // Build URL with search and sort parameters
+    const params = new URLSearchParams();
+    if (code) params.append('item_code', code);
+    if (description) params.append('description', description);
+    if (type) params.append('item_type', type);
+    params.append('sort_by', currentSort.column);
+    params.append('sort_order', currentSort.order);
+    
+    console.log('Search URL:', `/get_items?${params.toString()}`);
+    
+    fetch(`/get_items?${params.toString()}`)
+        .then(response => response.json())
+        .then(items => {
+            const tbody = document.querySelector('#items-table tbody');
+            tbody.innerHTML = '';
+
+            if (items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="16" class="text-center">No items found</td></tr>';
+                return;
+            }
+            
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.item_code}</td>
+                    <td>${item.description}</td>
+                    <td>${item.item_type || ''}</td>
+                    <td>${item.category || ''}</td>
+                    <td>${item.department || ''}</td>
+                    <td>${item.uom || ''}</td>
+                    <td>${item.min_level || ''}</td>
+                    <td>${item.max_level || ''}</td>
+                    <td>${item.price_per_kg ? '$' + parseFloat(item.price_per_kg).toFixed(2) : ''}</td>
+                    <td>${item.price_per_uom ? '$' + parseFloat(item.price_per_uom).toFixed(2) : ''}</td>
+                    <td>${item.supplier_name || ''}</td>
+                    <td>
+                        <div class="text-muted small">
+                            Created: ${item.created_by ? item.created_by + ' on ' + item.created_at : 'N/A'}<br>
+                            Updated: ${item.updated_by ? item.updated_by + ' on ' + item.updated_at : 'N/A'}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="/item-master/edit/${item.id}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <!-- Delete button removed for data integrity -->
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Apply column visibility after data is loaded
+            applyColumnVisibility();
+            // Update sort indicators
+            updateSortIndicators();
+        })
+        .catch(error => {
+            console.error('Error fetching items:', error);
+            alert('An error occurred while fetching items');
+        });
+}
+
+function sortTable(column) {
+    console.log('Sorting by column:', column);
+    
+    // Toggle sort order if clicking the same column
+    if (currentSort.column === column) {
+        currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+    } else {
+        currentSort.column = column;
+        currentSort.order = 'asc';
+    }
+    
+    console.log('Current sort:', currentSort);
+    
+    // Refresh data with new sort
+    searchItems();
+}
+
+function updateSortIndicators() {
+    // Remove all sort classes
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.classList.remove('sort-asc', 'sort-desc');
+    });
+    
+    // Add sort class to current column
+    const currentHeader = document.querySelector(`[data-sort="${currentSort.column}"]`);
+    if (currentHeader) {
+        currentHeader.classList.add(`sort-${currentSort.order}`);
+    }
+}
+
+function resetFilters() {
+    document.getElementById('item_code_search').value = '';
+    document.getElementById('search-description').value = '';
+    document.getElementById('search-type').value = '';
+    
+    // Reset sort to default
+    currentSort = {
+        column: 'item_code',
+        order: 'asc'
+    };
+    
+    searchItems();
+}
+
+function uploadExcel() {
+    const fileInput = document.getElementById('excel-upload');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        return;
+    }
+    
+    // Show progress bar
+    const progressContainer = document.getElementById('upload-progress');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+    const messageContainer = document.getElementById('upload-message');
+    
+    progressContainer.style.display = 'block';
+    messageContainer.style.display = 'none';
+    progressBar.style.width = '0%';
+    
+    const formData = new FormData();
+    formData.append('excel_file', file);
+    
+    // Simulate progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        progressBar.style.width = progress + '%';
+        if (progress >= 90) {
+            clearInterval(progressInterval);
+        }
+    }, 200);
+    
+    fetch('/item-master/upload-excel', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        
+        setTimeout(() => {
+            progressContainer.style.display = 'none';
+            messageContainer.style.display = 'block';
+            
+            if (result.error) {
+                messageContainer.className = 'alert alert-danger';
+                messageContainer.innerHTML = `<strong>Error:</strong> ${result.error}`;
+            } else {
+                messageContainer.className = 'alert alert-success';
+                messageContainer.innerHTML = `<strong>Success:</strong> ${result.message}`;
+                // Refresh the table
+                searchItems();
+            }
+            
+            // Hide message after 5 seconds
+            setTimeout(() => {
+                messageContainer.style.display = 'none';
+            }, 5000);
+        }, 500);
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        progressContainer.style.display = 'none';
+        messageContainer.style.display = 'block';
+        messageContainer.className = 'alert alert-danger';
+        messageContainer.innerHTML = `<strong>Error:</strong> Failed to upload file. Please try again.`;
+        console.error('Upload error:', error);
+        
+        setTimeout(() => {
+            messageContainer.style.display = 'none';
+        }, 5000);
+    });
+    
+    // Reset file input
+    fileInput.value = '';
+}
+
+function downloadExcel() {
+    // Get current search parameters
+    const code = document.getElementById('item_code_search').value;
+    const description = document.getElementById('search-description').value;
+    const type = document.getElementById('search-type').value;
+    
+    // Build query string
+    const params = new URLSearchParams();
+    if (code) params.append('item_code', code);
+    if (description) params.append('description', description);
+    if (type) params.append('item_type', type);
+    
+    // Create download link
+    const url = `/item-master/download-excel?${params.toString()}`;
+    
+    // Create temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'item_master.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function downloadTemplate() {
+    // Create download link for template
+    const url = '/item-master/download-template';
+    
+    // Create temporary link element and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'item_master_template.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Column visibility functions
+function toggleColumn(colIndex) {
+    const table = document.getElementById('items-table');
+    const isVisible = document.querySelector(`input[data-col-index="${colIndex}"]`).checked;
+    
+    // Toggle header
+    const headerCell = table.rows[0].cells[colIndex];
+    if (headerCell) {
+        headerCell.style.display = isVisible ? '' : 'none';
+    }
+    
+    // Toggle data cells
+    for (let i = 1; i < table.rows.length; i++) {
+        const cell = table.rows[i].cells[colIndex];
+        if (cell) {
+            cell.style.display = isVisible ? '' : 'none';
+        }
+    }
+}
+
+function showEssentialColumns() {
+    // Essential columns: Item Code, Description, Type, Status, Actions
+    const essentialColumns = [0, 1, 2, 14, 15];
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        const isEssential = essentialColumns.includes(colIndex);
+        checkbox.checked = isEssential;
+        toggleColumn(colIndex);
+    });
+}
+
+function showAllColumns() {
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        toggleColumn(colIndex);
+    });
+}
+
+function resetToDefault() {
+    // Default visible columns based on the initial state
+    const defaultColumns = {
+        2: true,   // Type
+        3: true,   // Category
+        4: true,   // Department
+        5: true,   // UOM
+        6: false,  // Min Level
+        7: false,  // Max Level
+        8: true,   // Price/KG
+        9: true,   // Price/UOM
+        10: false, // Supplier Name
+        11: false, // Calc Factor
+        12: false, // Units/Bag
+        13: false, // Avg Weight/Unit
+        14: true   // Status
+    };
+    
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        checkbox.checked = defaultColumns[colIndex] !== false;
+        toggleColumn(colIndex);
+    });
+}
+
+function initializeColumnVisibility() {
+    // Set initial visibility based on checkbox states
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        toggleColumn(colIndex);
+    });
+}
+
+function applyColumnVisibility() {
+    // Re-apply column visibility after table data is refreshed
+    const allCheckboxes = document.querySelectorAll('#column-toggle input[type="checkbox"]');
+    allCheckboxes.forEach(checkbox => {
+        const colIndex = parseInt(checkbox.getAttribute('data-col-index'));
+        const isVisible = checkbox.checked;
+        
+        const table = document.getElementById('items-table');
+        
+        // Toggle header
+        const headerCell = table.rows[0].cells[colIndex];
+        if (headerCell) {
+            headerCell.style.display = isVisible ? '' : 'none';
+        }
+        
+        // Toggle data cells
+        for (let i = 1; i < table.rows.length; i++) {
+            const cell = table.rows[i].cells[colIndex];
+            if (cell) {
+                cell.style.display = isVisible ? '' : 'none';
+            }
+        }
+    });
+}
+
+// Add click event listeners to sortable headers
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners to sortable headers
+    document.querySelectorAll('.sortable-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const column = this.getAttribute('data-sort');
+            sortTable(column);
+        });
+    });
+    
+    searchItems();
+    // Initialize column visibility on page load
+    initializeColumnVisibility();
+});
+
+$(document).ready(function() {
+    // Wait a bit for all libraries to load
+    setTimeout(function() {
+        console.log("Initializing item master autocomplete...");
+        console.log("jQuery version:", $.fn.jquery);
+        console.log("jQuery UI loaded:", typeof $.ui !== 'undefined');
+        console.log("Autocomplete available:", typeof $.ui.autocomplete !== 'undefined');
+        
+        // Ensure jQuery UI is loaded
+        if (typeof $.ui === 'undefined' || typeof $.ui.autocomplete === 'undefined') {
+            console.error("jQuery UI autocomplete not available");
+            return;
+        }
+    
+    // Initialize autocomplete for item code search
+    $("#item_code_search").autocomplete({
+        source: function(request, response) {
+            console.log("Autocomplete request for:", request.term);
+            
+            $.ajax({
+                url: "/search_item_codes",
+                type: "GET",
+                dataType: "json",
+                data: { term: request.term },
+                success: function(data) {
+                    console.log("Autocomplete response:", data);
+                    if (Array.isArray(data)) {
+                        var suggestions = data.map(function(item) {
+                            return {
+                                label: item.item_code + ' - ' + item.description,
+                                value: item.item_code
+                            };
+                        });
+                        response(suggestions);
+                    } else {
+                        response([]);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Autocomplete error:", error, "Status:", xhr.status);
+                    response([]);
+                }
+            });
+        },
+        minLength: 2,
+        delay: 300,
+        select: function(event, ui) {
+            console.log("Selected item:", ui.item);
+            $(this).val(ui.item.value);
+            searchItems();
+            return false;
+        },
+        focus: function(event, ui) {
+            return false;
+        }
+    });
+    
+    console.log("Item master autocomplete initialized");
+    }, 1000); // Close setTimeout
+});
+</script>
+{% endblock %}

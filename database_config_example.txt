@@ -1,0 +1,25 @@
+# Database Configuration Example
+# Create a .env file in your project root with these settings
+
+# Database Configuration
+# Update these values to match your MySQL setup
+SQLALCHEMY_DATABASE_URI=mysql+pymysql://your_username:your_password@localhost/gb_db
+
+# Flask Application Configuration  
+SECRET_KEY=your-secret-key-here
+
+# Example configurations for different setups:
+
+# For MySQL with password:
+# SQLALCHEMY_DATABASE_URI=mysql+pymysql://root:your_password@localhost/gb_db
+
+# For MySQL without password (if your setup allows):
+# SQLALCHEMY_DATABASE_URI=mysql+pymysql://root@localhost/gb_db
+
+# For MySQL on different host/port:
+# SQLALCHEMY_DATABASE_URI=mysql+pymysql://username:password@hostname:3306/gb_db
+
+# Common MySQL configurations:
+# - Default MySQL port is 3306
+# - Default MySQL host is localhost
+# - Database name should be 'gb_db' based on your app 

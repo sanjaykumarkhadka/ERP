@@ -1,0 +1,75 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit SOH Entry</h2>
+    <form method="POST" action="{{ url_for('soh.soh_edit', id=soh.id) }}">
+        <div class="form-group">
+            <label for="week_commencing">Week Commencing</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing" value="{{ soh.week_commencing_str if soh.week_commencing_str else '' }}">
+            
+        </div>
+        <div class="form-group">
+            <label for="fg_code">FG Code</label>
+            <input type="text" class="form-control" id="fg_code" name="fg_code" value="{{ soh.fg_code }}" required>
+        </div>
+        <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text" class="form-control" id="description" name="description" value="{{ soh.description }}" required>
+        </div>
+        <div class="form-group">
+            <label for="soh_dispatch_boxes">Dispatch Boxes</label>
+            <input type="number" step="0.01" class="form-control" id="soh_dispatch_boxes" name="soh_dispatch_boxes" value="{{ soh.soh_dispatch_boxes }}">
+        </div>
+        <div class="form-group">
+            <label for="soh_dispatch_units">Dispatch Units</label>
+            <input type="number" step="0.01" class="form-control" id="soh_dispatch_units" name="soh_dispatch_units" value="{{ soh.soh_dispatch_units }}">
+        </div>
+        <div class="form-group">
+            <label for="soh_packing_boxes">Packing Boxes</label>
+            <input type="number" step="0.01" class="form-control" id="soh_packing_boxes" name="soh_packing_boxes" value="{{ soh.soh_packing_boxes }}">
+        </div>
+        <div class="form-group">
+            <label for="soh_packing_units">Packing Units</label>
+            <input type="number" step="0.01" class="form-control" id="soh_packing_units" name="soh_packing_units" value="{{ soh.soh_packing_units }}">
+        </div>
+        <div class="form-group">
+            <label for="edit_date">Edit Date</label>
+            <input type="text" class="form-control" id="edit_date" name="edit_date" value="{{ soh.edit_date_str }}" readonly>
+        </div>
+        <button type="submit" class="btn btn-primary">Update SOH</button>
+        <a href="{{ url_for('soh.soh_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<!-- jQuery and jQuery UI for Autocomplete -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+
+<script>
+$(function() {
+    $("#fg_code").autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{{ url_for('soh.autocomplete_soh') }}",
+                dataType: "json",
+                data: { query: request.term },
+                success: function(data) {
+                    response($.map(data, function(item) {
+                        return {
+                            label: item.fg_code + " - " + item.description,
+                            value: item.fg_code,
+                            description: item.description
+                        };
+                    }));
+                }
+            });
+        },
+        minLength: 2,
+        select: function(event, ui) {
+            $("#description").val(ui.item.description);
+        }
+    });
+});
+</script>
+{% endblock %}

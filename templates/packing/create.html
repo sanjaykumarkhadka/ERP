@@ -1,0 +1,364 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Create Packing Entry</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="POST" action="{{ url_for('packing.packing_create') }}" id="packingForm">
+        <div class="form-group">
+            <label for="week_commencing">Week Commencing</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing" readonly required>
+        </div>
+        <div class="form-group">
+            <label for="packing_date">Packing Date</label>
+            <input type="text" class="form-control" id="packing_date" name="packing_date" required placeholder="Select a date">
+        </div>
+        <div class="form-group">
+            <label for="product_code">Product Code</label>
+            <select class="form-control" id="product_code" name="product_code" required onchange="updateDescription(); checkDuplicate()">
+                <option value="">Select Product Code</option>
+                {% for product in products %}
+                    <option value="{{ product.item_code }}" data-description="{{ product.description }}">{{ product.item_code }} - {{ product.description }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="special_order_kg">Special Order KG</label>
+            <input type="number" step="0.01" class="form-control" id="special_order_kg" name="special_order_kg" value="0.0">
+        </div>
+        <div class="form-group">
+            <label for="calculation_factor">Calculation Factor</label>
+            <input type="number" step="0.01" class="form-control" id="calculation_factor" name="calculation_factor" value="0.0">
+            <small class="form-text text-muted">Leave as 0.0 to use the calculation factor from Item Master</small>
+        </div>
+        
+        <!-- ItemMaster Info Display -->
+        <div class="item-master-info" id="itemMasterInfo" style="display: none;">
+            <div class="card mt-3 mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0 text-primary">Item Master Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Avg Weight/Unit:</strong>
+                            <span id="displayAvgWeight">-</span> kg
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Min Level:</strong>
+                            <span id="displayMinLevel">-</span> units
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Max Level:</strong>
+                            <span id="displayMaxLevel">-</span> units
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Calc Factor:</strong>
+                            <span id="displayCalcFactor">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SOH Creation Option - Simple and Clean -->
+        <div class="form-group">
+            <div class="card border-info">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 text-info">
+                        <i class="fas fa-database me-2"></i>Stock on Hand (SOH) Entry
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="create_soh_entry" name="create_soh_entry" value="1" checked>
+                        <label class="form-check-label" for="create_soh_entry">
+                            <strong>Create SOH entry if it doesn't exist (with 0 units)</strong>
+                        </label>
+                    </div>
+                    <small class="form-text text-muted mt-2">
+                        <i class="fas fa-info-circle text-info me-1"></i>
+                        This will automatically create a Stock on Hand entry for this product if one doesn't exist. 
+                        Leave checked unless you're certain the SOH entry already exists.
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="machinery">Machinery</label>
+            <select class="form-control" id="machinery" name="machinery" onchange="checkDuplicate()">
+                <option value="">Select Machinery</option>
+                {% for machine in machinery %}
+                    <option value="{{ machine.machineID }}">{{ machine.machineryName }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="priority">Priority</label>
+            <input type="number" class="form-control" id="priority" name="priority" value="0">
+        </div>
+        
+        <!-- Allergens Section -->
+        <div class="allergen-container">
+            <label class="allergen-label">Allergens</label>
+            <div class="allergen-section">
+                <div class="allergen-checkboxes">
+                    {% for allergen in allergens %}
+                    <div class="allergen-checkbox-wrapper">
+                        <input class="form-check-input allergen-checkbox" type="checkbox" 
+                               id="allergen_{{ allergen.allergens_id }}" 
+                               name="allergen_ids" 
+                               value="{{ allergen.allergens_id }}">
+                        <label class="form-check-label" for="allergen_{{ allergen.allergens_id }}">
+                            {{ allergen.name }}
+                        </label>
+                    </div>
+                    {% endfor %}
+                    <button type="button" class="btn btn-outline-secondary allergen-add-btn" data-bs-toggle="modal" data-bs-target="#newAllergenModal">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary" id="submitButton">Create</button>
+        <a href="{{ url_for('packing.packing_list') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+<!-- Modal for Adding New Allergen -->
+<div class="modal fade" id="newAllergenModal" tabindex="-1" aria-labelledby="newAllergenModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newAllergenModalLabel">Add New Allergen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="new-allergen-form">
+                    <div class="form-group">
+                        <label for="new-allergen-name" class="form-label">Allergen Name</label>
+                        <input type="text" id="new-allergen-name" class="form-control" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-new-allergen">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include Flatpickr CSS and JS from CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+<style>
+    .allergen-section {
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        margin-bottom: 1rem;
+    }
+    
+    .allergen-container {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .allergen-label {
+        flex: 0 0 auto;
+        padding-top: 1rem;
+        font-weight: 500;
+        color: #4e73df;
+        min-width: 80px;
+    }
+
+    .allergen-checkboxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .allergen-checkbox-wrapper {
+        display: inline-flex;
+        align-items: center;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .allergen-checkbox-wrapper:hover {
+        border-color: #adb5bd;
+        background-color: #f8f9fa;
+    }
+
+    .allergen-checkbox-wrapper .form-check-input {
+        margin-right: 0.35rem;
+        margin-top: 0;
+    }
+
+    .allergen-checkbox-wrapper .form-check-label {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        user-select: none;
+    }
+
+    .allergen-checkbox-wrapper input[type="checkbox"]:checked ~ .form-check-label {
+        font-weight: 500;
+    }
+
+    .allergen-add-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+</style>
+
+<script>
+    // Initialize Flatpickr on packing_date
+    flatpickr("#packing_date", {
+        dateFormat: "Y-m-d", // Matches backend expected format (YYYY-MM-DD)
+        onChange: function(selectedDates, dateStr, instance) {
+            updateWeekCommencing();
+            checkDuplicate();
+        }
+    });
+
+    function updateDescription() {
+        const select = document.getElementById('product_code');
+        const selectedOption = select.options[select.selectedIndex];
+        const description = selectedOption.getAttribute('data-description');
+        
+        // Update ItemMaster info display
+        if (select.value) {
+            fetch(`/packing/item_master_info/${select.value}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('displayAvgWeight').textContent = data.avg_weight_per_unit || '-';
+                    document.getElementById('displayMinLevel').textContent = data.min_level || '-';
+                    document.getElementById('displayMaxLevel').textContent = data.max_level || '-';
+                    document.getElementById('displayCalcFactor').textContent = data.calculation_factor || '-';
+                    document.getElementById('itemMasterInfo').style.display = 'block';
+                    
+                    // Update calculation factor if it's 0 or empty
+                    const calcFactorInput = document.getElementById('calculation_factor');
+                    if (!calcFactorInput.value || calcFactorInput.value === '0' || calcFactorInput.value === '0.0') {
+                        calcFactorInput.value = data.calculation_factor || '0.0';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching item master info:', error);
+                    document.getElementById('itemMasterInfo').style.display = 'none';
+                });
+        } else {
+            document.getElementById('itemMasterInfo').style.display = 'none';
+        }
+    }
+
+    function updateWeekCommencing() {
+        const packingDate = document.getElementById('packing_date').value;
+        if (packingDate) {
+            const date = new Date(packingDate);
+            const day = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+            const monday = new Date(date.setDate(diff));
+            document.getElementById('week_commencing').value = monday.toISOString().split('T')[0];
+        }
+    }
+
+    function checkDuplicate() {
+        const product_code = document.getElementById('product_code').value;
+        const packing_date = document.getElementById('packing_date').value;
+        const machinery = document.getElementById('machinery').value;
+        const week_commencing = document.getElementById('week_commencing').value;
+        
+        if (product_code && packing_date && week_commencing) {
+            const params = new URLSearchParams({
+                product_code: product_code,
+                packing_date: packing_date,
+                machinery: machinery || '',
+                week_commencing: week_commencing
+            });
+            
+            fetch(`/packing/check_duplicate?${params}`)
+                .then(response => response.json())
+                .then(data => {
+                    const submitButton = document.getElementById('submitButton');
+                    if (data.exists) {
+                        submitButton.disabled = true;
+                        alert(`A packing entry already exists for ${product_code} on ${packing_date}. Please choose a different date or product.`);
+                    } else {
+                        submitButton.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking for duplicates:', error);
+                });
+        }
+    }
+
+    // Add new allergen functionality
+    document.getElementById('save-new-allergen').addEventListener('click', function() {
+        const allergenName = document.getElementById('new-allergen-name').value;
+        if (!allergenName) {
+            alert('Please enter an allergen name');
+            return;
+        }
+
+        fetch('/allergens/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: allergenName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Add new allergen to the list
+                const allergenCheckboxes = document.querySelector('.allergen-checkboxes');
+                const newAllergenWrapper = document.createElement('div');
+                newAllergenWrapper.className = 'allergen-checkbox-wrapper';
+                newAllergenWrapper.innerHTML = `
+                    <input class="form-check-input allergen-checkbox" type="checkbox" 
+                           id="allergen_${data.allergen.id}" 
+                           name="allergen_ids" 
+                           value="${data.allergen.id}">
+                    <label class="form-check-label" for="allergen_${data.allergen.id}">
+                        ${data.allergen.name}
+                    </label>
+                `;
+                allergenCheckboxes.insertBefore(newAllergenWrapper, document.querySelector('.allergen-add-btn'));
+                
+                // Close modal and clear input
+                document.getElementById('new-allergen-name').value = '';
+                const modal = bootstrap.Modal.getInstance(document.getElementById('newAllergenModal'));
+                modal.hide();
+            } else {
+                alert('Error creating allergen: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating allergen');
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,310 @@
+{% extends 'index.html' %}
+
+{% block content %}
+<div class="container mt-2">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="mb-0">
+                <i class="fas fa-upload"></i> Recipe Master Upload
+            </h2>
+        </div>
+        <div class="card-body">
+            <div class="d-flex gap-2 mb-3">
+                <a href="{{ url_for('recipe.recipe_page') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+                <a href="{{ url_for('recipe.download_recipe_template') }}" class="btn btn-info">
+                    <i class="fas fa-download"></i> Download Template
+                </a>
+                <a href="{{ url_for('recipe.download_recipe_excel') }}" class="btn btn-warning">
+                    <i class="fas fa-file-excel"></i> Download Excel
+                </a>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="file" class="form-label">Select Excel File</label>
+                            <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>
+                            <div class="form-text">Supported formats: .xlsx, .xls</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="sheet_name" class="form-label">Sheet Name (Excel only)</label>
+                            <input type="text" class="form-control" id="sheet_name" name="sheet_name" value="Recipe Master" placeholder="Leave blank for default sheet">
+                            <div class="form-text">Default: "Recipe Master" (only used for Excel files)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5><i class="fas fa-table"></i> Required Columns</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Column Name</th>
+                                        <th>Status</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Recipe Code</strong></td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Unique code for the recipe group</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Description</strong></td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Recipe description</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Finished Good Code</strong></td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Item code of the finished product</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Raw Material Code</strong></td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Item code of the raw material component</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Kg Per Batch</strong></td>
+                                        <td><span class="badge bg-danger">Required</span></td>
+                                        <td>Quantity of raw material needed per batch</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>UOM</strong></td>
+                                        <td><span class="badge bg-info">Optional</span></td>
+                                        <td>Unit of Measure (e.g., KG)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Is Active</strong></td>
+                                        <td><span class="badge bg-info">Optional</span></td>
+                                        <td>Active status (Yes/No, defaults to Yes)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="alert alert-success mt-3" role="alert">
+                            <h6><i class="fas fa-magic"></i> Auto-calculated Fields:</h6>
+                            <p class="mb-0">Percentages are automatically calculated within each recipe group based on Kg Per Batch values.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-info" role="alert">
+                            <h6><i class="fas fa-info-circle"></i> Important Notes:</h6>
+                            <ul class="mb-0">
+                                <li>Recipe Code and Description are required and must be unique</li>
+                                <li>Finished Good Code and Raw Material Code must exist in Item Master</li>
+                                <li>Kg Per Batch must be a positive number</li>
+                                <li>Download the template above for the correct format</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn">
+                        <i class="fas fa-upload"></i> Upload Recipes
+                    </button>
+                </div>
+            </form>
+
+            <!-- Progress bar (hidden by default) -->
+            <div id="progressContainer" class="mt-3" style="display: none;">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                        Processing recipes...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sample data preview -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-eye"></i> Sample Data Format</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Recipe Code</th>
+                            <th>Description</th>
+                            <th>Finished Good Code</th>
+                            <th>Raw Material Code</th>
+                            <th>Kg Per Batch</th>
+                            <th>UOM</th>
+                            <th>Is Active</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>REC001</td>
+                            <td>Ham Recipe</td>
+                            <td>FG001</td>
+                            <td>RM001</td>
+                            <td>10.5</td>
+                            <td>KG</td>
+                            <td>Yes</td>
+                        </tr>
+                        <tr>
+                            <td>REC001</td>
+                            <td>Ham Recipe</td>
+                            <td>FG001</td>
+                            <td>RM002</td>
+                            <td>5.25</td>
+                            <td>KG</td>
+                            <td>Yes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    border: none;
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem 1.35rem;
+}
+
+.form-label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: #000000;
+}
+
+.form-control {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #d1d3e2;
+    border-radius: 0.35rem;
+}
+
+.form-control:focus {
+    border-color: #bac8f3;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.btn {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.35rem;
+}
+
+.table thead th {
+    background-color: #f8f9fc;
+    border-bottom: 2px solid #e3e6f0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #000000;
+}
+
+.progress {
+    height: 1rem;
+    background-color: #f8f9fc;
+}
+
+.progress-bar {
+    background-color: #4e73df;
+}
+
+.alert-info {
+    background-color: #e7f3ff;
+    border-color: #b8daff;
+    color: #004085;
+}
+
+.form-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    var fileInput = document.getElementById('file');
+    var uploadBtn = document.getElementById('uploadBtn');
+    var progressContainer = document.getElementById('progressContainer');
+    
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        alert('Please select a file to upload.');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+        e.preventDefault();
+        alert('Please select a valid Excel file (.xlsx or .xls).');
+        return;
+    }
+    
+    // Show progress bar and disable button
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    progressContainer.style.display = 'block';
+});
+
+document.getElementById('file').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        var fileSize = (file.size / 1024 / 1024).toFixed(2); // Convert to MB
+        var fileType = file.name.split('.').pop().toLowerCase();
+        
+        // Add file info below the input
+        var existingInfo = document.getElementById('fileInfo');
+        if (existingInfo) {
+            existingInfo.remove();
+        }
+        
+        var fileInfo = document.createElement('div');
+        fileInfo.id = 'fileInfo';
+        fileInfo.className = 'mt-2 text-muted';
+        fileInfo.innerHTML = `
+            <small>
+                <i class="fas fa-file"></i> ${file.name} (${fileSize} MB)
+                <span class="badge bg-${fileType === 'csv' ? 'success' : 'primary'}">${fileType.toUpperCase()}</span>
+            </small>
+        `;
+        
+        e.target.parentNode.appendChild(fileInfo);
+    }
+});
+</script>
+{% endblock %} 

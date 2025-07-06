@@ -1,0 +1,94 @@
+{% extends 'index.html' %}
+{% block nav %}
+    {%set current_page = 'inventory' %}
+{% endblock %}
+{% block content %}
+<div class="container">
+    <h2>Create Inventory Record</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form method="POST" action="{{ url_for('inventory.create_inventory') }}">
+        <div class="form-group">
+            <label for="week_commencing">Week Commencing</label>
+            <input type="date" class="form-control" id="week_commencing" name="week_commencing" required>
+        </div>
+        <div class="form-group">
+            <label for="category_id">Category</label>
+            <select class="form-control" id="category_id" name="category_id" required>
+                <option value="">Select Category</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="raw_material_id">Raw Material</label>
+            <select class="form-control" id="raw_material_id" name="raw_material_id" required>
+                <option value="">Select Raw Material</option>
+                {% for material in raw_materials %}
+                    <option value="{{ material.id }}">{{ material.description or material.item_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="price_per_kg">$/kg</label>
+            <input type="number" step="0.01" class="form-control" id="price_per_kg" name="price_per_kg" required>
+        </div>
+        <div class="form-group">
+            <label for="total_required">Total Required</label>
+            <input type="number" step="0.01" class="form-control" id="total_required" name="total_required" required>
+        </div>
+        <div class="form-group">
+            <label for="soh">SOH</label>
+            <input type="number" step="0.01" class="form-control" id="soh" name="soh" required>
+        </div>
+        <div class="form-group">
+            <label for="monday">Monday</label>
+            <input type="number" step="0.01" class="form-control" id="monday" name="monday" required>
+        </div>
+        <div class="form-group">
+            <label for="tuesday">Tuesday</label>
+            <input type="number" step="0.01" class="form-control" id="tuesday" name="tuesday" required>
+        </div>
+        <div class="form-group">
+            <label for="wednesday">Wednesday</label>
+            <input type="number" step="0.01" class="form-control" id="wednesday" name="wednesday" required>
+        </div>
+        <div class="form-group">
+            <label for="thursday">Thursday</label>
+            <input type="number" step="0.01" class="form-control" id="thursday" name="thursday" required>
+        </div>
+        <div class="form-group">
+            <label for="friday">Friday</label>
+            <input type="number" step="0.01" class="form-control" id="friday" name="friday" required>
+        </div>
+        <div class="form-group">
+            <label for="monday2">Monday2</label>
+            <input type="number" step="0.01" class="form-control" id="monday2" name="monday2" required>
+        </div>
+        <div class="form-group">
+            <label for="tuesday2">Tuesday2</label>
+            <input type="number" step="0.01" class="form-control" id="tuesday2" name="tuesday2" required>
+        </div>
+        <div class="form-group">
+            <label for="wednesday2">Wednesday2</label>
+            <input type="number" step="0.01" class="form-control" id="wednesday2" name="wednesday2" required>
+        </div>
+        <div class="form-group">
+            <label for="thursday2">Thursday2</label>
+            <input type="number" step="0.01" class="form-control" id="thursday2" name="thursday2" required>
+        </div>
+        <div class="form-group">
+            <label for="friday2">Friday2</label>
+            <input type="number" step="0.01" class="form-control" id="friday2" name="friday2" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Create</button>
+        <a href="{{ url_for('inventory.inventory_page') }}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

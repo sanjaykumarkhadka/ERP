@@ -1,0 +1,78 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-plus"></i> Create Production Entry</h2>
+        <div>
+            <a href="{{ url_for('production.production_list') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" class="needs-validation" novalidate>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="production_date" class="form-label">Production Date</label>
+                    <input type="date" class="form-control" id="production_date" name="production_date" 
+                           value="{{ packing_entry.packing_date.strftime('%Y-%m-%d') if packing_entry else '' }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="production_code" class="form-label">Production Code</label>
+                    <input type="text" class="form-control" id="production_code" name="production_code" 
+                           value="{{ recipe_family }}" required {% if recipe_family %}readonly{% endif %}>
+                    <div class="form-text">Enter the WIP item code for production.</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="product_description" class="form-label">Description</label>
+                    <input type="text" class="form-control" id="product_description" name="product_description">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="total_kg" class="form-label">Total KG</label>
+                    <input type="number" step="0.01" class="form-control" id="total_kg" name="total_kg" required>
+                    <div class="form-text">Total KG will be used to calculate batches (300 KG per batch).</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Create Production Entry
+                </button>
+                {% if packing_entry %}
+                <a href="{{ url_for('packing.packing_edit', id=packing_entry.id) }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                {% else %}
+                <a href="{{ url_for('production.production_list') }}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

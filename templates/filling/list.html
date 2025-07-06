@@ -1,0 +1,219 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="float-left">Filling List</h2>
+                    <div class="float-right">
+                        <a href="{{ url_for('filling.filling_create') }}" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Create New Filling
+                        </a>
+                        <a href="{{ url_for('recipe.usage') }}" class="btn btn-secondary">
+                            <i class="fas fa-chart-line"></i> Usage Report
+                        </a>
+                        <a href="{{ url_for('recipe.raw_material_report') }}" class="btn btn-primary">
+                            <i class="fas fa-file-alt"></i> Raw Material Report
+                        </a>
+                        <a href="{{ url_for('filling.export_fillings_excel') }}" class="btn btn-info">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </a>
+            </div>
+            </div>
+                <div class="card-body">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+                    <div class="search-box mb-4">
+                        <form action="{{ url_for('filling.filling_list') }}" method="GET">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="week_commencing">Week Commencing:</label>
+                                        <input type="date" class="form-control" id="week_commencing" 
+                                               name="week_commencing" value="{{ search_week_commencing }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="filling_date_start">Filling Date Start:</label>
+                                        <input type="date" class="form-control" id="filling_date_start" 
+                                               name="filling_date_start" value="{{ search_filling_date_start }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label for="filling_date_end">Filling Date End:</label>
+                                        <input type="date" class="form-control" id="filling_date_end" 
+                                               name="filling_date_end" value="{{ search_filling_date_end }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>&nbsp;</label>
+                                        <button type="submit" class="btn btn-primary btn-block">
+                                            <i class="fas fa-search"></i> Search
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>ID</th>
+                        <th>Week Commencing</th>
+                        <th>Filling Date</th>
+                                    <th>WIPF Item</th>
+                        <th>Description</th>
+                        <th>Kilo per Size</th>
+                                    <th width="150">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                                {% for filling_data in filling_data %}
+                                <tr>
+                                    <td>{{ filling_data.filling.id }}</td>
+                                    <td>{{ filling_data.week_commencing }}</td>
+                                    <td>{{ filling_data.filling.filling_date.strftime('%d/%m/%Y') }}</td>
+                                    <td>{{ filling_data.filling.item.item_code if filling_data.filling.item else 'N/A' }}</td>
+                                    <td>{{ filling_data.filling.item.description if filling_data.filling.item else 'N/A' }}</td>
+                                    <td>{{ filling_data.filling.kilo_per_size | round(2) }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{{ url_for('filling.filling_edit', id=filling_data.filling.id) }}" 
+                                               class="btn btn-warning btn-sm" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="{{ url_for('filling.filling_delete', id=filling_data.filling.id) }}" 
+                                                  method="POST" style="display: inline;">
+                                                <button type="submit" class="btn btn-danger btn-sm" 
+                                                        onclick="return confirm('Are you sure you want to delete this filling?')" 
+                                                        title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                            </form>
+                                        </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: #f8f9fc;
+    border-bottom: 1px solid #e3e6f0;
+    padding: 1rem;
+}
+
+.card-header:after {
+    content: '';
+    display: table;
+    clear: both;
+}
+
+.float-left {
+    float: left;
+        margin: 0;
+    }
+
+.float-right {
+    float: right;
+}
+
+.search-box {
+    background: #f8f9fc;
+    padding: 1rem;
+    border-radius: 0.35rem;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    vertical-align: middle;
+    border-bottom: 2px solid #e3e6f0;
+}
+
+.table td, .table th {
+    padding: 0.75rem;
+    vertical-align: middle;
+}
+
+.btn-group {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.alert {
+    margin-bottom: 1rem;
+}
+
+.alert-dismissible .close {
+    padding: 0.75rem 1.25rem;
+}
+
+.form-control:focus {
+    border-color: #bac8f3;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+.btn-block {
+    margin-top: 2rem;
+}
+
+@media (max-width: 768px) {
+    .float-right {
+        float: none;
+        margin-top: 1rem;
+        text-align: center;
+    }
+    
+    .float-left {
+        float: none;
+        text-align: center;
+    }
+    
+    .card-header {
+        text-align: center;
+    }
+    
+    .btn-group {
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}

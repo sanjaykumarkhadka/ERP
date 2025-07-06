@@ -1,0 +1,545 @@
+{% extends 'index.html' %}
+{% block nav %}
+    {%set current_page = 'inventory' %}
+{% endblock %}
+
+{% block content %}
+<div style="width: 100%">
+    <!-- Inventory Search Section -->
+    <section id="search">
+        <h2>Inventory Search</h2>
+        <form id="searchForm">
+            
+            <div class="form-group">
+                <label for="search_category">Category:</label>
+                <select id="search_category" name="category">
+                    <option value="">All Categories</option>
+                    <!-- Options populated via JavaScript -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="search_raw_material">Raw Material:</label>
+                <select id="search_raw_material" name="raw_material">
+                    <option value="">All Raw Materials</option>
+                    <!-- Options populated via JavaScript -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="search_week_commencing">Week Commencing:</label>
+                <input type="date" id="search_week_commencing" name="week_commencing" value="{{ search_week_commencing | default('') }}">
+            </div>
+            <button type="button" onclick="fetchInventories()">Search</button>
+            <button type="button" class="btn btn-primary" onclick="exportToExcel()">Export to Excel</button>
+        </form>
+    </section>
+
+    <!-- Column Visibility Toggle Section -->
+    <section id="column-toggle">
+        <h3>Column Visibility</h3>
+        <div class="column-toggle">
+            <div class="toggle-row">
+                <label><input type="checkbox" checked data-col-index="1" onchange="toggleColumn(1)"> Week Commencing</label>
+                <label><input type="checkbox" checked data-col-index="2" onchange="toggleColumn(2)"> Category</label>
+                <label><input type="checkbox" checked data-col-index="3" onchange="toggleColumn(3)"> Raw Material</label>
+                <label><input type="checkbox" checked data-col-index="4" onchange="toggleColumn(4)"> $/kg</label>
+                <label><input type="checkbox" checked data-col-index="5" onchange="toggleColumn(5)"> Total Required</label>
+            </div>
+            <div class="toggle-row">
+                <label><input type="checkbox" checked data-col-index="6" onchange="toggleColumn(6)"> SOH</label>
+                <label><input type="checkbox" checked data-col-index="7" onchange="toggleColumn(7)"> Value SOH</label>
+                <label><input type="checkbox" checked data-col-index="8" onchange="toggleColumn(8)"> Monday</label>
+                <label><input type="checkbox" checked data-col-index="9" onchange="toggleColumn(9)"> Tuesday</label>
+                <label><input type="checkbox" checked data-col-index="10" onchange="toggleColumn(10)"> Wednesday</label>
+            </div>
+            <div class="toggle-row">
+                <label><input type="checkbox" checked data-col-index="11" onchange="toggleColumn(11)"> Thursday</label>
+                <label><input type="checkbox" checked data-col-index="12" onchange="toggleColumn(12)"> Friday</label>
+                <label><input type="checkbox" checked data-col-index="13" onchange="toggleColumn(13)"> Total to be Ordered</label>
+                <label><input type="checkbox" data-col-index="14" onchange="toggleColumn(14)"> Monday2</label>
+                <label><input type="checkbox" data-col-index="15" onchange="toggleColumn(15)"> Tuesday2</label>
+            </div>
+            <div class="toggle-row">
+                <label><input type="checkbox" data-col-index="16" onchange="toggleColumn(16)"> Wednesday2</label>
+                <label><input type="checkbox" data-col-index="17" onchange="toggleColumn(17)"> Thursday2</label>
+                <label><input type="checkbox" data-col-index="18" onchange="toggleColumn(18)"> Friday2</label>
+                <label><input type="checkbox" checked data-col-index="19" onchange="toggleColumn(19)"> Variance</label>
+                <label><input type="checkbox" checked data-col-index="20" onchange="toggleColumn(20)"> Value to be Ordered</label>
+            </div>
+            <div class="toggle-actions">
+                <button type="button" class="btn btn-sm btn-secondary" onclick="showEssentialColumns()">Show Essential Only</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="showAllColumns()">Show All</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="resetToDefault()">Reset to Default</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Inventory List Section -->
+    <section id="list">
+        <h2>Inventory List</h2>
+        <a href="{{ url_for('inventory.create_inventory') }}" class="btn btn-primary my-3">Create New Inventory Record</a>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div id="resultSection" class="table-container">
+            <table class="table table-bordered" id="inventoryListTable">
+                <thead>
+                    <tr>
+                        <th data-col-index="1">Week Commencing</th>
+                        <th data-col-index="2">Category</th>
+                        <th data-col-index="3">Raw Material</th>
+                        <th data-col-index="4">$/kg</th>
+                        <th data-col-index="5">Total Required</th>
+                        <th data-col-index="6">SOH</th>
+                        <th data-col-index="7">Value SOH</th>
+                        <th data-col-index="8">Monday</th>
+                        <th data-col-index="9">Tuesday</th>
+                        <th data-col-index="10">Wednesday</th>
+                        <th data-col-index="11">Thursday</th>
+                        <th data-col-index="12">Friday</th>
+                        <th data-col-index="13">Total to be Ordered</th>
+                        <th data-col-index="14">Monday2</th>
+                        <th data-col-index="15">Tuesday2</th>
+                        <th data-col-index="16">Wednesday2</th>
+                        <th data-col-index="17">Thursday2</th>
+                        <th data-col-index="18">Friday2</th>
+                        <th data-col-index="19">Variance</th>
+                        <th data-col-index="20">Value to be Ordered</th>
+                        <th data-col-index="21">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="21" class="no-results">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<style>
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    /* Column Toggle Styles */
+    #column-toggle {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        border: 1px solid #dee2e6;
+    }
+    
+    #column-toggle h3 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        color: #495057;
+        font-size: 1.1rem;
+    }
+    
+    .column-toggle {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .toggle-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 5px;
+    }
+    
+    .column-toggle label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-size: 0.9rem;
+        min-width: 180px;
+        padding: 2px 0;
+    }
+    
+    .column-toggle input[type="checkbox"] {
+        margin-right: 6px;
+        transform: scale(1.1);
+    }
+    
+    .toggle-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    /* Inventory List Section */
+    #list {
+        margin-top: 0;
+    }
+    
+    #list h2 {
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .btn.my-3 {
+        margin: 5px 0;
+    }
+    
+    /* Responsive Table Styles */
+    .table-container {
+        overflow-x: auto;
+        width: 100%;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-top: 0;
+    }
+    
+    #inventoryListTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin: 0;
+    }
+    
+    #inventoryListTable th,
+    #inventoryListTable td {
+        border: 1px solid #ddd;
+        padding: 6px 8px;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    #inventoryListTable th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        font-size: 11px;
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+    
+    /* Optimize specific column widths */
+    #inventoryListTable th:nth-child(2),
+    #inventoryListTable td:nth-child(2) { 
+        width: 100px; 
+        max-width: 120px; 
+    }
+    
+    #inventoryListTable th:nth-child(3),
+    #inventoryListTable td:nth-child(3) { 
+        width: 150px; 
+        max-width: 200px; 
+    }
+    
+    #inventoryListTable th:nth-child(21),
+    #inventoryListTable td:nth-child(21) { 
+        width: 120px; 
+        max-width: 120px; 
+        text-align: center;
+    }
+    
+    /* Responsive breakpoints */
+    @media (max-width: 1600px) {
+        #inventoryListTable {
+            font-size: 11px;
+        }
+        #inventoryListTable th,
+        #inventoryListTable td {
+            padding: 4px 6px;
+        }
+    }
+    
+    @media (max-width: 1400px) {
+        #inventoryListTable {
+            font-size: 10px;
+        }
+        #inventoryListTable th,
+        #inventoryListTable td {
+            padding: 3px 4px;
+        }
+        .toggle-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+        .column-toggle label {
+            min-width: auto;
+        }
+    }
+    
+    @media (max-width: 1200px) {
+        #inventoryListTable {
+            font-size: 9px;
+        }
+        #inventoryListTable th,
+        #inventoryListTable td {
+            padding: 2px 3px;
+        }
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 20px;
+    }
+</style>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+let columnVisibility = Array(21).fill(true); // Initialize all 21 columns as visible
+let categoryOptions = [];
+let rawMaterialOptions = [];
+
+$(document).ready(function() {
+    // Fetch dropdown options
+    fetchCategoryOptions();
+    fetchRawMaterialOptions();
+
+    // Trigger search on input change
+    $("#search_week_commencing, #search_category, #search_raw_material").on('change', function() {
+        fetchInventories();
+    });
+
+    // Add week commencing date validation
+    $("#search_week_commencing").on('change', function() {
+        const selectedDate = $(this).val();
+        if (selectedDate) {
+            const mondayDate = getMonday(selectedDate);
+            if (selectedDate !== mondayDate) {
+                $(this).val(mondayDate);
+                alert("Week commencing date has been adjusted to Monday: " + mondayDate);
+            }
+        }
+    });
+
+    // Initial fetch
+    fetchInventories();
+});
+
+// Fetch category options for dropdown
+function fetchCategoryOptions() {
+    $.ajax({
+        url: "{{ url_for('inventory.get_category_options') }}",
+        type: "GET",
+        success: function(response) {
+            categoryOptions = response.data || [];
+            populateCategoryDropdown();
+        },
+        error: function(xhr, status, error) {
+            console.error("Error fetching category options:", status, error);
+            alert("Failed to load category options.");
+        }
+    });
+}
+
+// Fetch raw material options for dropdown
+function fetchRawMaterialOptions() {
+    $.ajax({
+        url: "{{ url_for('inventory.get_raw_material_options') }}",
+        type: "GET",
+        success: function(response) {
+            rawMaterialOptions = response.data || [];
+            populateRawMaterialDropdown();
+        },
+        error: function(xhr, status, error) {
+            console.error("Error fetching raw material options:", status, error);
+            alert("Failed to load raw material options.");
+        }
+    });
+}
+
+// Populate category dropdown
+function populateCategoryDropdown() {
+    const select = $("#search_category");
+    select.empty();
+    select.append('<option value="">All Categories</option>');
+    categoryOptions.forEach(function(category) {
+        select.append(`<option value="${category.id}">${category.name}</option>`);
+    });
+}
+
+// Populate raw material dropdown
+function populateRawMaterialDropdown() {
+    const select = $("#search_raw_material");
+    select.empty();
+    select.append('<option value="">All Raw Materials</option>');
+    rawMaterialOptions.forEach(function(rawMaterial) {
+        select.append(`<option value="${rawMaterial.id}">${rawMaterial.name}</option>`);
+    });
+}
+
+// Utility function to format date YYYY-MM-DD to DD-MM-YYYY
+function formatDateToDDMMYYYY(dateString) {
+    if (!dateString) return '';
+    const parts = dateString.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateString;
+}
+
+// Utility function to get Monday of the week
+function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff)).toISOString().split('T')[0];
+}
+
+// Fetch inventory records based on search
+function fetchInventories() {
+    let weekCommencing = $("#search_week_commencing").val().trim();
+    let category = $("#search_category").val().trim();
+    let rawMaterial = $("#search_raw_material").val().trim();
+
+    $('#inventoryListTable tbody').html('<tr><td colspan="21" class="no-results">Loading...</td></tr>');
+
+    $.ajax({
+        url: "{{ url_for('inventory.get_search_inventories') }}",
+        type: "GET",
+        data: {
+            week_commencing: weekCommencing,
+            category: category,
+            raw_material: rawMaterial
+        },
+        success: function(response) {
+            let tableBody = $("#inventoryListTable tbody");
+            tableBody.empty();
+            $("#resultSection").removeClass("hidden");
+
+            if (response.error) {
+                tableBody.append(`<tr><td colspan="21" class="no-results">Error: ${response.error}</td></tr>`);
+                return;
+            }
+
+            if (response.data && response.data.length > 0) {
+                response.data.forEach(function(inventory) {
+                    tableBody.append(`
+                        <tr data-id="${inventory.id || ''}">
+                            <td>${formatDateToDDMMYYYY(inventory.week_commencing) || ''}</td>
+                            <td>${inventory.category_name || ''}</td>
+                            <td>${inventory.raw_material_name || ''}</td>
+                            <td>${inventory.price_per_kg !== null ? inventory.price_per_kg.toFixed(2) : ''}</td>
+                            <td>${inventory.total_required !== null ? inventory.total_required.toFixed(2) : ''}</td>
+                            <td>${inventory.soh !== null ? inventory.soh.toFixed(2) : ''}</td>
+                            <td>${inventory.value_soh !== null ? inventory.value_soh.toFixed(2) : ''}</td>
+                            <td>${inventory.monday !== null ? inventory.monday.toFixed(2) : ''}</td>
+                            <td>${inventory.tuesday !== null ? inventory.tuesday.toFixed(2) : ''}</td>
+                            <td>${inventory.wednesday !== null ? inventory.wednesday.toFixed(2) : ''}</td>
+                            <td>${inventory.thursday !== null ? inventory.thursday.toFixed(2) : ''}</td>
+                            <td>${inventory.friday !== null ? inventory.friday.toFixed(2) : ''}</td>
+                            <td>${inventory.total_to_be_ordered !== null ? inventory.total_to_be_ordered.toFixed(2) : ''}</td>
+                            <td>${inventory.monday2 !== null ? inventory.monday2.toFixed(2) : ''}</td>
+                            <td>${inventory.tuesday2 !== null ? inventory.tuesday2.toFixed(2) : ''}</td>
+                            <td>${inventory.wednesday2 !== null ? inventory.wednesday2.toFixed(2) : ''}</td>
+                            <td>${inventory.thursday2 !== null ? inventory.thursday2.toFixed(2) : ''}</td>
+                            <td>${inventory.friday2 !== null ? inventory.friday2.toFixed(2) : ''}</td>
+                            <td>${inventory.variance !== null ? inventory.variance.toFixed(2) : ''}</td>
+                            <td>${inventory.value_to_be_ordered !== null ? inventory.value_to_be_ordered.toFixed(2) : ''}</td>
+                            <td>
+                                <a href="{{ url_for('inventory.edit_inventory', id=0) | replace('0', '{}') }}".replace('{}', inventory.id || '') class="btn btn-sm btn-secondary">Edit</a>
+                                <a href="{{ url_for('inventory.delete_inventory', id=0) | replace('0', '{}') }}".replace('{}', inventory.id || '') class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                            </td>
+                        </tr>
+                    `);
+                });
+
+                // Calculate Total Required client-side
+                const rows = document.querySelectorAll('#inventoryListTable tbody tr');
+                rows.forEach(row => {
+                    const monday = parseFloat(row.cells[7].textContent) || 0;
+                    const tuesday = parseFloat(row.cells[8].textContent) || 0;
+                    const wednesday = parseFloat(row.cells[9].textContent) || 0;
+                    const thursday = parseFloat(row.cells[10].textContent) || 0;
+                    const friday = parseFloat(row.cells[11].textContent) || 0;
+                    row.cells[4].textContent = (monday + tuesday + wednesday + thursday + friday).toFixed(2);
+                });
+            } else {
+                tableBody.append(`<tr><td colspan="21" class="no-results">No results found.</td></tr>`);
+            }
+
+            applyColumnVisibility();
+        },
+        error: function(xhr, status, error) {
+            console.error("Fetch inventories error:", status, error, xhr.responseText);
+            $("#inventoryListTable tbody").html(`<tr><td colspan="21" class="no-results">Error loading data: ${xhr.responseText || error}</td></tr>`);
+            applyColumnVisibility();
+        }
+    });
+}
+
+// Apply column visibility
+function applyColumnVisibility() {
+    for (let i = 1; i <= 21; i++) {
+        const selector = `#inventoryListTable th[data-col-index="${i}"], #inventoryListTable tbody td:nth-child(${i})`;
+        if (!columnVisibility[i - 1]) {
+            $(selector).hide();
+        } else {
+            $(selector).show();
+        }
+    }
+}
+
+// Column toggle logic
+function toggleColumn(colIndex) {
+    columnVisibility[colIndex - 1] = !columnVisibility[colIndex - 1];
+    applyColumnVisibility();
+}
+
+function showEssentialColumns() {
+    const essentialColumns = [1, 2, 3, 4, 5, 6, 7, 13, 19, 20, 21];
+    columnVisibility = Array(21).fill(false);
+    essentialColumns.forEach(idx => {
+        columnVisibility[idx - 1] = true;
+    });
+    applyColumnVisibility();
+    $('#column-toggle input[type="checkbox"]').each(function() {
+        let idx = parseInt($(this).attr('data-col-index'));
+        $(this).prop('checked', essentialColumns.includes(idx));
+    });
+}
+
+function resetToDefault() {
+    const defaultVisible = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21];
+    columnVisibility = Array(21).fill(false);
+    defaultVisible.forEach(idx => {
+        columnVisibility[idx - 1] = true;
+    });
+    applyColumnVisibility();
+    $('#column-toggle input[type="checkbox"]').each(function() {
+        let idx = parseInt($(this).attr('data-col-index'));
+        $(this).prop('checked', defaultVisible.includes(idx));
+    });
+}
+
+function showAllColumns() {
+    columnVisibility = Array(21).fill(true);
+    applyColumnVisibility();
+    $('#column-toggle input[type="checkbox"]').prop('checked', true);
+}
+
+// Export to Excel
+function exportToExcel() {
+    let weekCommencing = $("#search_week_commencing").val().trim();
+    let category = $("#search_category").val().trim();
+    let rawMaterial = $("#search_raw_material").val().trim();
+
+    let url = "{{ url_for('inventory.export_inventories') }}?" +
+              "week_commencing=" + encodeURIComponent(weekCommencing) +
+              "&category=" + encodeURIComponent(category) +
+              "&raw_material=" + encodeURIComponent(rawMaterial);
+
+    window.location.href = url;
+}
+</script>
+{% endblock %}

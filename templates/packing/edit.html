@@ -1,0 +1,302 @@
+{% extends "index.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2>Edit Packing Entry</h2>
+    <form method="POST" class="needs-validation" novalidate>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="week_commencing">Week Commencing:</label>
+                    <input type="date" class="form-control" id="week_commencing" name="week_commencing" value="{{ packing.week_commencing | format_date }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="packing_date">Packing Date:</label>
+                    <input type="date" class="form-control" id="packing_date" name="packing_date" value="{{ packing.packing_date | format_date }}" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="product_code">Product Code:</label>
+                    <input type="text" class="form-control" id="product_code" name="product_code" value="{{ packing.item.item_code }}" required readonly>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <input type="text" class="form-control" id="description" name="description" value="{{ packing.item.description }}" readonly>
+            </div>
+        </div>
+    </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="special_order_kg">Special Order (KG):</label>
+                    <input type="number" step="0.01" class="form-control" id="special_order_kg" name="special_order_kg" value="{{ packing.special_order_kg or 0.0 }}">
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="special_order_unit">Special Order Unit:</label>
+                    <input type="number" class="form-control" id="special_order_unit" name="special_order_unit" value="{{ packing.special_order_unit if packing.special_order_unit is not none else '0' }}" readonly>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="requirement_kg">Requirement KG:</label>
+                    <input type="number" step="0.01" class="form-control" id="requirement_kg" name="requirement_kg" value="{{ "%.2f"|format(packing.requirement_kg|float) if packing.requirement_kg else '0.00' }}" readonly>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="requirement_unit">Requirement Unit:</label>
+                    <input type="number" class="form-control" id="requirement_unit" name="requirement_unit" value="{{ packing.requirement_unit if packing.requirement_unit is not none else '0' }}" readonly>
+                </div>
+        </div>
+    </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="soh_requirement_units_week">SOH Requirement Units/Week:</label>
+                    <input type="number" class="form-control" id="soh_requirement_units_week" name="soh_requirement_units_week" value="{{ packing.soh_requirement_units_week or 0 }}" required>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="calculation_factor">Calculation Factor:</label>
+                    <input type="number" step="0.01" class="form-control" id="calculation_factor" name="calculation_factor" value="{{ packing.calculation_factor or 0.0 }}" required>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="machinery_id">Machinery:</label>
+                    <select class="form-control" id="machinery_id" name="machinery_id">
+                        <option value="">Select Machinery</option>
+                        {% for m in machinery %}
+                        <option value="{{ m.id }}" {% if packing.machinery_id == m.id %}selected{% endif %}>
+                            {{ m.machineryName }}
+                        </option>
+            {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="priority">Priority:</label>
+                    <input type="number" class="form-control" id="priority" name="priority" value="{{ packing.priority or 0 }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <a href="{{ url_for('packing.packing_list') }}" class="btn btn-secondary">Cancel</a>
+                {% if not from_duplicate %}
+                <a href="{{ url_for('packing.packing_edit', id=packing.id, duplicate=1) }}" class="btn btn-info">Duplicate</a>
+        {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- Fixed Production List -->
+    <div class="fixed-production-list" style="position: sticky; top: 0; z-index: 1000; background-color: white; padding: 15px; border-bottom: 1px solid #ddd;">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Production List (Recipe Family: {{ packing.item.item_code.split('.')[0] if '.' in packing.item.item_code else packing.item.item_code }})</h3>
+                    <a href="{{ url_for('production.production_create', recipe_family=packing.item.item_code.split('.')[0], packing_id=packing.id) }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create Production Entry
+                    </a>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Production Code</th>
+                            <th>Description</th>
+                            <th>Total KG</th>
+                            <th>Batches</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for production in related_productions %}
+                        <tr>
+                            <td>{{ production.production_code }}</td>
+                            <td>{{ production.description }}</td>
+                            <td>{{ "%.2f"|format(production.total_kg|float) if production.total_kg else '0.00' }}</td>
+                            <td>{{ "%.2f"|format(production.batches|float) if production.batches else '0.00' }}</td>
+                            <td>
+                                <a href="{{ url_for('production.production_edit', id=production.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <form action="{{ url_for('production.production_delete', id=production.id) }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this production entry?');">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2"><strong>Total:</strong></td>
+                            <td><strong>{{ "%.2f"|format(total_production_kg|float) if total_production_kg else '0.00' }}</strong></td>
+                            <td><strong>{{ "%.2f"|format((total_production_kg/300)|float) if total_production_kg else '0.00' }}</strong></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Packing List -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Related Packing Entries</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>FG Code</th>
+                        <th>Description</th>
+                        <th>Requirement KG</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for packing in related_packings %}
+                    <tr>
+                        <td>{{ packing.item.item_code }}</td>
+                        <td>{{ packing.item.description }}</td>
+                        <td>{{ "%.2f"|format(packing.requirement_kg|float) if packing.requirement_kg else '0.00' }}</td>
+                        <td>
+                            <a href="{{ url_for('packing.packing_edit', id=packing.id) }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i> Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2"><strong>Total:</strong></td>
+                        <td><strong>{{ "%.2f"|format(total_requirement_kg|float) if total_requirement_kg else '0.00' }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Packing List Table with Bulk Edit -->
+    <h3 class="mt-5">Packing List</h3>
+    <form id="bulkEditForm" method="POST" action="{{ url_for('packing.bulk_edit') }}">
+        <div class="mb-3">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#bulkEditModal">Bulk Edit Selected</button>
+        </div>
+        <table class="table table-bordered table-striped editabletable" id="packingTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Week Commencing</th>
+                    <th>Packing Date</th>
+                    <th>Product Code</th>
+                    <th>Description</th>
+                    <th>Special Order (KG)</th>
+                    <th>Special Order Unit</th>
+                    <th>Requirement KG</th>
+                    <th>Requirement Unit</th>
+                    <th>Avg Weight per Unit (KG)</th>
+                    <th>SOH Requirement Units/Week</th>
+                    <th>Calculation Factor</th>
+                    <th>Machinery</th>
+                    <th>Priority</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for packing in related_packings %}
+                <tr data-id="{{ packing.id }}">
+                    <td><input type="checkbox" name="packing_ids" value="{{ packing.id }}"></td>
+                    <td>{{ packing.week_commencing | format_date }}</td>
+                    <td>{{ packing.packing_date | format_date }}</td>
+                    <td>{{ packing.item.item_code }}</td>
+                    <td>{{ packing.item.description }}</td>
+                    <td class="editable editable-cell" data-field="special_order_kg" data-id="{{ packing.id }}" data-original="{{ packing.special_order_kg if packing.special_order_kg is not none else '' }}" ondblclick="makeEditable(this)">{{ packing.special_order_kg if packing.special_order_kg is not none else '' }}</td>
+                    <td data-field="special_order_unit">{{ packing.special_order_unit }}</td>
+                    <td data-field="requirement_kg">{{ "%.2f"|format(packing.requirement_kg|float) if packing.requirement_kg else '0.00' }}</td>
+                    <td data-field="requirement_unit">{{ packing.requirement_unit }}</td>
+                    <td>{{ packing.item.avg_weight_per_unit }}</td>
+                    <td>{{ packing.soh_requirement_units_week }}</td>
+                    <td class="editable" data-field="calculation_factor" data-original="{{ packing.calculation_factor if packing.calculation_factor is not none else '' }}">{{ packing.calculation_factor if packing.calculation_factor is not none else '' }}</td>
+                    <td>
+                        <select name="machinery" data-id="{{ packing.id }}" data-field="machinery" onchange="updateCellSelect(this)">
+                            <option value="">Select</option>
+                            {% for machine in machinery %}
+                                <option value="{{ machine.machineID }}" {% if packing.machinery_id is not none and packing.machinery_id == machine.machineID %}selected{% endif %}>{{ machine.machineryName }}</option>
+                            {% endfor %}
+                        </select>
+                        <!-- Debug output -->
+                        <div style="font-size: 0.8em; color: #666; margin-top:5px;">
+                            Current Machinery: {% if packing.machinery %}{{ packing.machinery.machineryName }}{% else %}None{% endif %}
+                        </div>
+                    </td>
+                    <td class="editable editable-cell" data-field="priority" data-id="{{ packing.id }}" data-original="{{ packing.priority if packing.priority is not none else '' }}" ondblclick="makeEditable(this)">{{ packing.priority if packing.priority is not none else '' }}</td>
+                    <td>
+                        <a href="{{ url_for('packing.packing_edit', id=packing.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                        <form action="{{ url_for('packing.packing_delete', id=packing.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this packing entry?');">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="15">No related packing entries found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="7" class="text-end"><strong>Total:</strong></td>
+                    <td>{{ "%.2f"|format(total_requirement_kg|float) if total_requirement_kg else '0.00' }}</td>
+                    <td colspan="7"></td>
+                </tr>
+            </tfoot>
+        </table>
+    </form>
+
+    <!-- Bulk Edit Modal -->
+    <div class="modal fade" id="bulkEditModal" tabindex="-1" aria-labelledby="bulkEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="bulkEditModalLabel">Bulk Edit Selected Entries</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Add bulk edit form fields here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="bulkEditForm" class="btn btn-primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

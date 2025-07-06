@@ -1,0 +1,186 @@
+<!-- item.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Item Management</title>
+    <style>
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Item Management</h2>
+        <nav>
+            <a href="recipe-search.html">Recipe Search</a> |
+            <a href="recipe-add.html">Add Recipe</a>
+        </nav>
+        
+        <form id="itemForm">
+            <div class="form-group">
+                <label for="itemNo">Item No:</label>
+                <input type="text" id="itemNo" required>
+            </div>
+            <div class="form-group">
+                <label for="itemName">Item Name:</label>
+                <input type="text" id="itemName" required>
+            </div>
+            <div class="form-group">
+                <label for="ingredients">Required Ingredients:</label>
+                <textarea id="ingredients" rows="4" required></textarea>
+            </div>
+            <button type="submit">Save Item</button>
+        </form>
+
+        <h3>Existing Items</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Item No</th>
+                    <th>Item Name</th>
+                    <th>Required Ingredients</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>IT001</td>
+                    <td>Chocolate Cake</td>
+                    <td>Flour, Sugar, Cocoa Powder, Eggs, Milk</td>
+                </tr>
+                <!-- More items would be dynamically added here -->
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+
+<!-- recipe-search.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recipe Search</title>
+    <style>
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .search-container { margin: 20px 0; }
+        .dropdown { position: absolute; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; display: none; }
+        .dropdown div { padding: 8px; cursor: pointer; }
+        .dropdown div:hover { background-color: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Recipe Search</h2>
+        <nav>
+            <a href="item.html">Item Management</a> |
+            <a href="recipe-add.html">Add Recipe</a>
+        </nav>
+
+        <div class="search-container">
+            <div class="form-group">
+                <label for="itemSearch">Search by Item:</label>
+                <input type="text" id="itemSearch" placeholder="Start typing item name...">
+                <div id="itemDropdown" class="dropdown">
+                    <div data-value="IT001">Chocolate Cake</div>
+                    <div data-value="IT002">Vanilla Cupcake</div>
+                    <!-- More items would be dynamically added here -->
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="recipeSearch">Search by Recipe Name:</label>
+                <input type="text" id="recipeSearch">
+            </div>
+        </div>
+
+        <div id="searchResults">
+            <h3>Search Results</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Recipe ID</th>
+                        <th>Recipe Name</th>
+                        <th>Related Items</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Results would be dynamically populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Show dropdown when typing in item search
+        document.getElementById('itemSearch').addEventListener('input', function() {
+            const dropdown = document.getElementById('itemDropdown');
+            if (this.value.length > 0) {
+                dropdown.style.display = 'block';
+            } else {
+                dropdown.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+
+<!-- recipe-add.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Add Recipe</title>
+    <style>
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        .item-list { margin-top: 10px; }
+        .selected-items { margin-top: 10px; padding: 10px; background: #f4f4f4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Add New Recipe</h2>
+        <nav>
+            <a href="item.html">Item Management</a> |
+            <a href="recipe-search.html">Recipe Search</a>
+        </nav>
+
+        <form id="recipeForm">
+            <div class="form-group">
+                <label for="recipeName">Recipe Name:</label>
+                <input type="text" id="recipeName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="itemSelect">Add Items:</label>
+                <input type="text" id="itemSelect" placeholder="Search for items...">
+                <div id="itemDropdown" class="dropdown">
+                    <!-- Items would be dynamically populated here -->
+                </div>
+            </div>
+
+            <div class="selected-items">
+                <h4>Selected Items:</h4>
+                <ul id="selectedItemsList">
+                    <!-- Selected items would be dynamically added here -->
+                </ul>
+            </div>
+
+            <div class="form-group">
+                <label for="instructions">Cooking Instructions:</label>
+                <textarea id="instructions" rows="4" required></textarea>
+            </div>
+
+            <button type="submit">Save Recipe</button>
+        </form>
+
+        <div id="itemNotFound" style="display: none;">
+            <p>Item not found? <a href="item.html">Add new item</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Filling</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header>
+        <h1>Create Filling</h1>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">Home</a></li>
+                <li><a href="{{ url_for('recipe.recipe_page') }}">Recipe</a></li>
+                <li><a href="{{ url_for('soh.soh_list') }}">SOH</a></li>
+                <li><a href="{{ url_for('packing.packing_list') }}">Packing</a></li>
+                <li><a href="{{ url_for('filling.filling_list') }}">Filling</a></li>
+                <li><a href="{{ url_for('production.production_list') }}">Production</a></li>               
+                <li><a href="{{ url_for('recipe.usage') }}">Usage Report</a></li>
+                <li><a href="{{ url_for('recipe.raw_material_report') }}" class="{% if current_page == 'raw_material_report' %}active{% endif %}">Raw Material Report</a></li>
+                <li><a href="{{ url_for('inventory.inventory_page') }}" class="{% if current_page == 'inventory' %}active{% endif %}">Inventory</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <h2>Create Filling</h2>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <form action="{{ url_for('filling.filling_create') }}" method="POST">
+            <div>
+                <label for="filling_date">Filling Date:</label>
+                <input type="date" id="filling_date" name="filling_date" required>
+            </div>
+            <div>
+                <label for="wipf_id">WIPF Item:</label>
+                <select id="wipf_id" name="wipf_id" required>
+                    <option value="">Select WIPF Item</option>
+                    {% for item in wipf_items %}
+                    <option value="{{ item.id }}">{{ item.item_code }} - {{ item.description }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="kilo_per_size">Kilo per Size:</label>
+                <input type="number" id="kilo_per_size" name="kilo_per_size" step="0.01" value="0.0">
+            </div>
+            <button type="submit">Create</button>
+        </form>
+    </main>
+</body>
+</html>
