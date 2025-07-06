@@ -4,6 +4,7 @@ import os
 import sqlalchemy.exc
 from datetime import datetime
 from flask_migrate import Migrate
+from flask import send_from_directory
 
 # Import the single SQLAlchemy instance
 from database import db
@@ -95,7 +96,7 @@ def create_app():
     @app.before_request
     def require_login():
         # Allow access to login, register, and static files without authentication
-        allowed_routes = ['login.login', 'login.register', 'login.check_username', 'login.check_email', 'static']
+        allowed_routes = ['login.login', 'login.register', 'login.check_username', 'login.check_email', 'static','sw']
         
         if request.endpoint in allowed_routes:
             return
@@ -112,6 +113,10 @@ def create_app():
     def index():
         return render_template('index.html', current_page="home")
 
+    @app.route('/service-worker.js')
+    def sw():
+        return send_from_directory('.', 'service-worker.js')    
+
     # Database tables already exist - no need to create them
     return app
 
@@ -119,4 +124,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,host='0.0.0.0')
